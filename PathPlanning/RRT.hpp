@@ -1,0 +1,137 @@
+#pragma once
+#include <iostream>
+#include <cmath>
+#include <limits>
+#include <../DataStructures/Graph.hpp>
+using std::pair;
+using std::make_pair;
+
+typedef struct node Node;
+
+class RRT {
+
+    private:
+        int G_HEIGHT;
+        int G_WIDTH;
+        int** Grid;
+        Graph<Node, int> RapidTree;
+		float SearchRadius;
+		Node Start;
+		Node Goal;
+
+        /**
+         * @brief Find the Vertex in the Tree that is nearest to the given Random (x,y)
+         *          coordinates.
+         * 
+         * @param randPos Random Position
+		 *
+         * @return ** pair<int, float> - (Index of the Nearest Vertex, Distance to Random Position)
+         */
+        pair<int, float> Get_NearestVertexIndex(Node randPos);
+
+        /**
+         * @brief Produce a random (x, y) coordinate pair within the bounds of the grid.
+         * 
+         * @return ** Node - A Random (x, y) position on the grid.
+         */
+        Node Get_RandomPosition();
+
+        /**
+         * @brief Set new Vertex at the Max Connection Distance in the direction of the 
+         *          Random Coordinate. 
+         * 
+         * @param nearestVIndex A pair: (Vertex Index within Graph, Distance from Random Position).
+         * @param randPos Random Position (x, y) coordinates
+         * @param maxConnectDist Maximum distance that a Vertex can be from another Vertex 
+         *                          it's connected to.
+         * @return true - If new Vertex was set.
+         * @return false - If new Vertex was not set.
+         */
+        bool Set_NewVertex(pair<int, float> nearestVIndex, Node randPos, 
+            int maxConnectDist);
+		
+		/**
+		 * @brief Produce a vector of all nodes within a given radius of the random node.
+		 *
+		 * @param search_radius The radius around the given node in which to search for nodes.
+		 * @param randPos The random node at the center of the search radius.
+		 *
+		 * @return ** vector<int> - List of neighboring vector indices
+		 */
+		vector<int> Get_Neighbors(float search_radius, Node randPos); 
+
+		/**
+		 * @brief 
+		 *
+		 * @param neighbors List of vectors within the search radius of a random node.
+		 *
+		 * @return ** int - Index of neighbor with best Cost
+		 */
+    	int Get_BestNeighbor(vector<int> neighbors);
+
+		/**
+		 * @brief 
+		 *
+		 * @param neighbors 
+		 * @param nodeIndex 
+		 *
+		 * @return ** void 
+		 */
+		void Rewire_Neighbors(vector<int> neighbors, int nodeIndex);
+
+		/**
+		 * @brief Calculate the Euclidean Distancee between two Nodes
+		 *
+		 * @param node_a
+		 * @param node_b
+		 *
+		 * @return ** float - The distance between 2 nodes.
+		 * **/
+		float Get_Distance(Node node_a, Node node_b); 
+
+    public:
+
+        /**
+         * @brief Performs either an RRT or an RRT* search on a given Grid.
+         * 
+         * @param grid The Grid that will be searched
+         * @param width Width of the Grid
+         * @param height Heigh of the Grid
+         * 
+         */
+        RRT(int **grid, int width, int height);
+
+        /**
+         * @brief Runs the RRT algorithm
+         * 
+         * @param start Start Coordinates
+         * @param goal Goal Coordinates
+         * @param maxConnectionDistance Maximum distance that a Vertex can be from another Vertex 
+         *                          it's connected to.
+         * @return ** void 
+         */
+        void Run_RRT(Node start, Node goal, float maxConnectionDistance);
+
+		/**
+		 * @brief 
+		 *
+		 * @param start
+		 * @param goal
+		 * @param maxConnectionDistance
+		 * @param search_radius
+		 *
+		 * @return ** void 
+		 */
+        void Run_RRTStar(Node start, Node goal, float maxConnectionDistance, float search_radius);
+
+};
+
+
+struct node {	
+	int x;
+	int y;
+	int DistanceFromStart;
+	int ParentIndex;
+};
+
+
