@@ -15,6 +15,7 @@ using std::vector;
 using std::pair;
 
 typedef struct pose_edge PoseEdge;
+typedef struct odometry_reading OdometryReadng;
 typedef std::vector<size_t> SizeVector;
 typedef std::vector<double> ValueVector;
 //typedef vector<float> FloatVector;
@@ -53,11 +54,12 @@ class PoseGraphOptSLAM {
 		 * 			Computes the Predicted Pose of the robot. (i.e., what the
 		 * 			robot expects to observe.)
 		 *
-		 * @param MeasuredPose
+		 * @param MeasuredPose 
+		 * @param odom Odometry reading (translation velocity & rotation velocity) 
 		 *
 		 * @return ** void
 		 */
-		void BuildErrorFunction(VectorXf MeasuredPose, float trans_vel, float rot_vel);
+		void BuildErrorFunction(VectorXf MeasuredPose, OdometryReadng odom);
 
 
 
@@ -95,7 +97,7 @@ class PoseGraphOptSLAM {
     public:
 
         /**
-         * @brief 
+         * @brief Initialies a Pose Graph Optimization object.
 		 *
 		 * @param max_nodes Maximum number of nodes allowed in the Pose Graph
 		 * @param pose_dimension The number of elements in the Pose Vector
@@ -121,6 +123,11 @@ class PoseGraphOptSLAM {
 struct pose_edge {
     VectorXf Pose; // Pose.
     MatrixXf NoiseInfoMatrix; // Encodes the uncertainty in the transformation to the Pose.
+};
+
+struct odometry_reading {
+	float RobotTranslation; 
+	float RobotRotation;
 };
 
 

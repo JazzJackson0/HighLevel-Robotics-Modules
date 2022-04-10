@@ -2,9 +2,13 @@
 #include <iostream>
 #include <random>
 #include <vector>
+#include <cmath>
 using std::vector;
+using std::pair;
+using std::make_pair;
 
 typedef struct particle Particle;
+typedef struct odometry_reading OdometryReadng;
 
 class ParticleFilter {
 
@@ -13,6 +17,8 @@ class ParticleFilter {
 		std::normal_distribution<float> distribution();
 		vector<Particle> ParticleSet;
 		int MaxParticles;
+		int PoseDimensions;
+		float TimeInterval;
 		float pose_std_dev = 1.0;
 		float weight_std_dev = 0.5;
 		float range_coef; // How much range weight impacts total particle weight
@@ -20,21 +26,23 @@ class ParticleFilter {
         
 		
 		/**
-         * @brief
+         * @brief Runs the particle generation and importance weighting.
 		 *
-		 * @param particle_set
-		 * @param control_command
-		 * @oaram scan
+		 * @param particle_set The set of Particles
+		 * @param motion_command The Odometry command (v, w)
+		 * @param scan Range Scan
+		 * @param odom The Odometry command (v, w)
          * 
          * @return ** vector<Particle> - Updated Particle Set
          */
-        vector<Particle> RunParticleFilter(vector<Particle> particle_set, vector<float> control_command, vector<vector> scan);
+        vector<Particle> RunParticleFilter(vector<Particle> particle_set, 
+			vector<vector<float>> scan, OdometryReadng odom);
 
 
         /**
-         * @brief Low Variance Resampling
+         * @brief Uses the Low Variance Resampling Algorithm to resample the particles.
 		 *
-		 * @param particle_set
+		 * @param particle_set The set of Particles
          * 
          * @return ** vector<Particle> Resampled Particle Set 
          */
@@ -42,27 +50,29 @@ class ParticleFilter {
 
 
 		/**
-		 * @brief 
+		 * @brief Returns the probability of the mean (created with range_scan & particle_scan) 
+		 * 			occurring. A higher value (used as a weight) indicates a higher similarity 
+		 * 			between robot & particle data. A lower value indicates a low similarity.
 		 *
-		 * @param robot_scan
-		 * @param particle_scan
-		 * @param std_dev
+		 * @param robot_data Range Scan 
+		 * @param particle_data Particle Data
+		 * @param std_dev Standard Deviation
 		 *
-		 * @return float - Probability
-		 *
-		 * **/
-		float ProbabilityDensityFunction(float robot_scan, float particle_scan, float std_dev);
+		 * @return ** float - Probability
+		 */
+		float ProbabilityDensityFunction(float robot_data, float particle_data, float std_dev);
 
 
     public:
 
         /**
-         * @brief 
+         * @brief Initializes the particle filter and creates a uniform distribution of particles.
 		 *
-		 * @param max_particles
-         * 
+		 * @param max_particles Max Number of Particles 
+		 * @param pose_dimensions Robot/Particle pose dimensions
+		 * @param time_interval Time interval ..........................
          */
-        ParticleFilter(int max_particles);
+        ParticleFilter(int max_particles, int pose_dimensions, float time_interval);
 
 
 		/**
@@ -76,8 +86,12 @@ class ParticleFilter {
 
 
 struct particle {
-	
 	vector<float> Pose;
 	float weight;
+};
+
+struct odometry_reading {
+	float RobotTranslation; 
+	float RobotRotation;
 };
 

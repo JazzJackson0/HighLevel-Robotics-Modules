@@ -34,6 +34,10 @@ class A_Star {
          *          ||| Use when your movement is restricted to 4 directions
          *              (right, left, up, down)
          * 
+         * @param currentRow Current x coordinate
+         * @param currentCol Current y coordinate
+         * @param goalCell Coordinates of the Goal cell
+         * 
          * @return ** float 
          */
         float GetManhattanDistance(int currentRow, int currentCol, CellCoordinate goalCell);
@@ -41,6 +45,10 @@ class A_Star {
         /**
          * @brief Get the Diagonal Distance to goal. (An Approximate Heuristic)
          *          ||| Use when you can move in all 8 directions
+         * 
+         * @param currentRow Current x coordinate
+         * @param currentCol Current y coordinate
+         * @param goalCell Coordinates of the Goal cell
          * 
          * @return ** float 
          */
@@ -51,6 +59,10 @@ class A_Star {
          *          |||  Simply the distance between the current cell and the goal cell 
          *              using the Distance Formula.
          *          ||| For movement in any direction.
+         * 
+         * @param currentRow Current x coordinate
+         * @param currentCol Current y coordinate
+         * @param goalCell Coordinates of the Goal cell
          * 
          * @return ** float 
          */

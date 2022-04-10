@@ -9,7 +9,9 @@ using std::vector;
 
 typedef struct state_vec StateVec;
 typedef struct pose_plus PosePlus;
+typedef struct odometry_reading OdometryReadng;
 typedef enum f_type FunctionType;
+
 
 class EKFSlam {
 
@@ -38,18 +40,17 @@ class EKFSlam {
 		VecAD<float> Xh((size_t) PoseDimensions);
 		VecAD<float> Yh(); // Assign correct size
 		ADFun<float> UpdateFunction;		
-		ADFun<float> ObservationFunction;		
-
-
+		ADFun<float> ObservationFunction;	
 
 		/**
 		 * @brief Updates the pose based on a given mathematical motion model / Update Function.
 		 *
-		 * @param MeasuredPose
+		 * @param MeasuredPose 
+		 * @param odom Odometry reading (translation velocity & rotation velocity) 
 		 *
 		 * @return ** VectorXf Updated Pose
 		 */
-		VectorXf UpdatePose(VectorXf MeasuredPose, float translation, float rotation);
+		VectorXf UpdatePose(VectorXf MeasuredPose, OdometryReadng odom);
 
 
 
@@ -70,12 +71,12 @@ class EKFSlam {
 		 * * @brief Sets up the Update Function/Motion Model g() as a true set of equations 
 		 * 			with unknown independent variables for input into the Jacobian Matrix G.
 		 *
-		 *
-		 * @param MeasuredPose
+		 * @param MeasuredPose 
+		 * @param odom Odometry reading (translation velocity & rotation velocity) 
 		 *
 		 * @return ** void
 		 */
-		void BuildUpdateFunctionFor_G(PosePlus MeasuredPose, float translation, float rotation);
+		void BuildUpdateFunctionFor_G(PosePlus MeasuredPose, OdometryReadng odom);
 
 
 
@@ -83,7 +84,7 @@ class EKFSlam {
 		 * @brief Sets up the Observation Function h() as a true set of equations 
 		 * 			with unknown independent variables for input into the Jacobian Matrix H.
 		 *
-		 * @param MeasuredPose
+		 * @param MeasuredPose 
 		 *
 		 * @return ** void
 		 */
@@ -95,13 +96,12 @@ class EKFSlam {
          * @brief Update the Mean with a new Predicted State and propagate the Covariance Matrix
          *          forward in time.
 		 *
-		 * @param current_pose
-		 * @param 
-		 * @param 
+		 * @param current_pose 
+		 * @param odom Odometry reading (translation velocity & rotation velocity) 
          * 
          * @return ** void 
          */
-        void Prediction(VectorXf current_pose, float trans_vel, float rot_vel);
+        void Prediction(VectorXf current_pose, OdometryReadng odom);
 
 
 
@@ -116,10 +116,11 @@ class EKFSlam {
 
 
         /**
-         * @brief Creates the H matrix and b vector for the Linear system
-         *          needed to minimize the error.
+         * @brief Creates and solves the Jacobian for a given function.
          * 
-         * @param StateVector The vector of poses to be optimized.
+         * @param f_type The function to create and solve a Jacobian for.
+		 * 					|||  UPDATE: Update Function, OBSERVATION: Observation Function
+		 * @param StateVector The vector of poses to be optimized.
          * @return ** MatrixXf - Jacobian Matrix 
          */
 		MatrixXf CalculateJacobian(FunctionType f_type, StateVec StateVector);
@@ -127,13 +128,13 @@ class EKFSlam {
 
 
 		/**
-		 * @breif 
+		 * @brief Builds the initial State Vector and Covariance Matrix
 		 *
-		 * @param pose_dim
-		 * @param landmark_dim
-		 * @param landmark_num
-		 * @param pose
-		 * @param landmarks
+		 * @param pose_dim Pose Dimensions
+		 * @param landmark_dim Landmark Dimensions
+		 * @param landmark_num Number of Landmarks
+		 * @param pose Current Pose
+		 * @param landmarks Current vector of Landmarks
 		 *
 		 * @return ** void 
 		 */
@@ -142,15 +143,13 @@ class EKFSlam {
     
 	public:
 
-
-
         /**
-         * @brief
+         * @brief Initialize an EKF Slam object
 		 *
 		 * @param initial_state 
-		 * @param pose_dim 
-		 * @param landmark_dim
-		 * @param landmark_num
+		 * @param pose_dim Pose Dimensions
+		 * @param landmark_dim Landmark Dimensions
+		 * @param landmark_num Number of Landmarks
 		 * @param obs_covariance Observation Covariance Matrix
          */
         EKFSlam(StateVec initial_state, int pose_dim, int landmark_dim, 
@@ -166,8 +165,12 @@ class EKFSlam {
         void Run();
 };
 
+struct odometry_reading {
+	float RobotTranslation; 
+	float RobotRotation;
+};
 
-struct pose_plus {	
+struct pose_plus {	// REMOVE THIS
 	VectorXf RobotPose;
 	float RobotTranslation; 
 	float RobotRotation;

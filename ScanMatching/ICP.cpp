@@ -2,10 +2,10 @@
 #include <utility>
 
 
-void ICP::BuildErrorFunction(VectorXf MeasuredPose) {
+void ICP::BuildErrorFunction(VectorXf NewPoint, VectorXf ReferencePoint) {
 	
 	// Initialize each element in X as an Auto-Diff Object (Equivalent to a variable x)
-	for (size_t i = 0; i < PoseDimension; i++) {
+	for (size_t i = 0; i < ErrorParameterNum; i++) {
 		
 		X[i] = AD<float>(0);
 	}
@@ -16,11 +16,9 @@ void ICP::BuildErrorFunction(VectorXf MeasuredPose) {
 	Independent(X);
 
 	// Set up your functions that will be Auto-Differentiated
-	//Y[0] = MeasuredPose[0] - CppADD::cos(X[0]) + Whatever...;
-	//Y[1] = MeasuredPose[1] - ;
-	//Y[2] = MeasuredPose[2] - ;
-	//Y[3] = ;
-
+		// X = (t_x, t_y, angle) 
+	Y[0] = CppAD::cos(X[2]) * NewPoint[0] - CppAD::sin(X[2]) * NewPoint[1] + X[0] - ReferencePoint[0];
+	Y[1] = CppAD::sin(X[2]) * NewPoint[0] + CppAD::cos(X[2]) * NewPoint[1] + X[0] - ReferencePoint[1];
 
 	// Creates f: x -> y and stops tape recording
 		// Performs the derivative calculations on the empty x variables.
@@ -31,8 +29,7 @@ void ICP::BuildErrorFunction(VectorXf MeasuredPose) {
 
 MatrixXf ICP::CalculateJacobian(FunctionType f_type, std::vector<VectorXf> StateVector) {
 	
-	// STEP 1: Set Up Update Function----------------------------------------------
-		
+	// STEP 1: Set Up Update Function----------------------------------------------	
 	BuildErrorFunction(StateVector.RobotPose);	
 	
 	// STEP 2: Compute the Jacobian of the Update Function ------------------------
@@ -60,22 +57,23 @@ MatrixXf ICP::CalculateJacobian(FunctionType f_type, std::vector<VectorXf> State
 
 
 
-pair<PointCloud, PointCloud>  ICP::Calculate_Correspondences(PointCloud PointCloudA, PointCloud PointCloudB) {
+pair<PointCloud, PointCloud>  ICP::Calculate_Correspondences(PointCloud RefPointCloud, 
+	PointCloud NewPointCloud) {
 	
-	int a_size = PointCloudA.Points.size();
-	int b_size = PointCloudB.Points.size();
+	int a_size = RefPointCloud.Points.size();
+	int b_size = NewPointCloud.Points.size();
 	pair<PointCloud, PointCloud> Correspondences;
-	PointCloud PointSetB;
+	PointCloud PointSet_New;
 
 	for (int i = 0; i < a_size; i++) {
 		
-		VectorXf point_a = PointCloudA.Points[i]; 
+		VectorXf point_a = RefPointCloud.Points[i]; 
 		float min_dist = std::numeric_limits<float>::max();
 		int corresponding_indx = -1;
 
 		for (int j = 0; j < b_size; j++) {
 			
-			VectorXf point_b = PointCloudB.Points[j]; 
+			VectorXf point_b = NewPointCloud.Points[j]; 
 			float dist = std::sqrt( (point_a * point_a) + (point_b * point_b) );
 
 			if (dist < min_dist) {
@@ -85,11 +83,11 @@ pair<PointCloud, PointCloud>  ICP::Calculate_Correspondences(PointCloud PointClo
 		}
 		
 		// Pull out the Point Set in B that corresponds directly with Point Cloud A
-		PointSetB.Points.push_back(PointSetB.Points[j]);
-		PointSetB.Weights.pop_back(PointSetB.Weights[j]);
+		PointSet_New.Points.push_back(PointSetB.Points[j]);
+		PointSet_New.Weights.pop_back(PointSetB.Weights[j]);
 	}
 
-	Correspondences = std::make_pair(PointCloudA, PointSetB);
+	Correspondences = std::make_pair(RefPointCloud, PointSet_New);
 	return Correspondences;
 }
 
@@ -102,9 +100,9 @@ ICP::ICP(int pose_dim) {
 
 
 
-void ICP::RunSVDAlign(PointCloud TruePointSet, PointCloud EstimatedPointSet) {
+void ICP::RunSVDAlign(PointCloud RefPointSet, PointCloud NewPointSet) {
 	
-	PointCloud AlignedPoints = EstimatedPointSet; // Probably need a deep copy (maybe something to copy the vectors inside)
+	PointCloud AlignedPoints = NewPointSet; // Probably need a deep copy (maybe something to copy the vectors inside)
 	VectorXf TrueCenterMass; // Initialize to 0
 	VectorXf EstimatedCenterMass; // Initialize to 0
 	VectorXf a; 
@@ -114,26 +112,26 @@ void ICP::RunSVDAlign(PointCloud TruePointSet, PointCloud EstimatedPointSet) {
 	float EstWeightSum = 0.0;
 	int cloud_size;
 
-	if (TruePointSet.Points.size() > EstimatedPointSet.Points.size()) {
-		cloud_size = TruePointSet.Points.size();	
+	if (RefPointSet.Points.size() > NewPointSet.Points.size()) {
+		cloud_size = RefPointSet.Points.size();	
 	}
-	cloud_size = EstimatedPointSet.Points.size();
+	cloud_size = NewPointSet.Points.size();
 
 	// Calculate Centers of Mass
 	for (int i = 0; i < cloud_size; i++) {
 		// Check that i doesnt go over point cloud size.
-		TrueCenterMass += TruePointSet.Points[i]; // Multiply by Scalar
-		TrueWeightSum += TruePointSet.Weights[i]; // Divide Sum by this 
+		TrueCenterMass += RefPointSet.Points[i]; // Multiply by Scalar
+		TrueWeightSum += RefPointSet.Weights[i]; // Divide Sum by this 
 		
-		EstimatedCenterMass += EstimatedPointSet.Points[i]; // Multiply by Scalar
-		EstWeightSum += EstimatedPointSet.Weights[i]; // Divide Sum by this 
+		EstimatedCenterMass += NewPointSet.Points[i]; // Multiply by Scalar
+		EstWeightSum += NewPointSet.Weights[i]; // Divide Sum by this 
 	}
 
 	// Calculate Cross-Covariance Matrix H
 	for (int i = 0; i < cloud_size; i++) {
 		
-		a = (TruePointSet.Points[i] - TrueCenterMass);
-		b = (EstimatedPointSet.Points[i] - EstimatedCenterMass);
+		a = (RefPointSet.Points[i] - TrueCenterMass);
+		b = (NewPointSet.Points[i] - EstimatedCenterMass);
 		
 		H += a * b.transpose(); // Multiply by weight
 	}
@@ -148,14 +146,14 @@ void ICP::RunSVDAlign(PointCloud TruePointSet, PointCloud EstimatedPointSet) {
 	// Translate & Rotate Cloud
 	for (int i = 0; i < cloud_size; i++) {
 
-		AlignedPoints.Points[i] = (RotationM * EstimatedPointSet.Points[i]) + TranslationV;
+		AlignedPoints.Points[i] = (RotationM * NewPointSet.Points[i]) + TranslationV;
 		// Handle Weight Updates
 	}
 }
 
 
 
-void ICP::RunSVD(PointCloud EstimatedPointCloud) {
+void ICP::RunSVD(PointCloud NewPointCloud) {
 
 }
 

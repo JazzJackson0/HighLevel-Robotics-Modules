@@ -152,7 +152,7 @@ class Bug {
 
 
 		/**
-		 * @brief 
+		 * @brief Updates the angle from the current position to goal.
 		 *
 		 * @return ** void
 		 */
@@ -168,7 +168,7 @@ class Bug {
 
 
 		/**
-		 * @brief 
+		 * @brief Checks if current position intersects wiith the m-line.
 		 *
 		 * @return ** void
 		 */
@@ -177,7 +177,7 @@ class Bug {
 
 
 		/**
-		 * @brief 
+		 * @brief Follows the boundary of a wall
 		 *
 		 * @param type Bug Algorithm Type
 		 *
@@ -189,7 +189,7 @@ class Bug {
     public:
 
 		/**
-		 * @brief 
+		 * @brief Initializes a Bug Algorithm object
 		 *
 		 * @param start_pose - The starting pose
 		 * @param goal - The goal point
@@ -201,35 +201,33 @@ class Bug {
 
 
         /**
-		 * @brief 
+		 * @brief Runs the BUG 0 algorithm
 		 *
-		 * return ** void
+		 * @return ** void
 		 */
 		void Bug0();
 
 
 		 /**
-		 * @brief 
+		 * @brief Runs the BUG 1 algorithm
 		 *
-		 * return ** void
+		 * @return ** void
 		 */
         void Bug1();
 
 
 		 /**
-		 * @brief 
+		 * @brief Runs the BUG 2 algorithm
 		 *
-		 * return ** void
+		 * @return ** void
 		 */
         void Bug2();
 
 
 		 /**
-		 * @brief 
+		 * @brief Runs the Tangent BUG algorithm
 		 *
-		 * @param
-		 *
-		 * return ** void
+		 * @return ** void
 		 */
         void TangentBug();
 

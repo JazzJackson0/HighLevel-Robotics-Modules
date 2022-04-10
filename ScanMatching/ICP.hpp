@@ -16,7 +16,8 @@ using namespace::Eigen;
 class ICP {
 	
 		int PoseDimension;
-		VecAD<float> X((size_t)PoseDimension);
+		int ErrorParameterNum = 3;
+		VecAD<float> X((size_t)PoseDimension); // X = (t_x, t_y, angle)
 		VecAD<float> Y(); // Assign correct size
 		ADFun<float> ErrorFunction;		
 
@@ -24,7 +25,7 @@ class ICP {
 
 
 		/**
-		 * @brief 
+		 * @brief Builds the error function for the Non-Linear Least Squares ICP method.
 		 *
 		 * @param MeasuredPose
 		 *
@@ -35,9 +36,8 @@ class ICP {
 
 
 		/**
-         * @brief
+         * @brief Creates and solves the Jacobian for a given function.
 		 *
-         * 
          * @param StateVector The vector of poses to be optimized.
          * @return ** MatrixXf - Jacobian 
          */
@@ -46,13 +46,16 @@ class ICP {
 
 
 		/**
-		 * @brief
+		 * @brief Calculates the correspondences between two point clouds and returns subsets
+		 * 			of each cloud that map to each other (n-to-n).
 		 *
-		 * @param 
+		 * @param RefPointCloud - Reference Point Cloud
+		 * @param NewPointCloud - New Point Cloud
 		 *
-		 * @return **
+		 * @return ** pair<PointCloud, PointCloud> - (Reference Point Set, New Point Set)
 		 */
-		pair<PointCloud, PointCloud>  Calculate_Correspondences(PointCloud PointCloudA, PointCloud PointCloudB);
+		pair<PointCloud, PointCloud>  Calculate_Correspondences(PointCloud RefPointCloud, 
+			PointCloud NewPointCloud);
 
 
 
@@ -60,9 +63,9 @@ class ICP {
 	
 
 		/**
-		 * @brief Initialize an Iterative Closest Point Algorithm Object
+		 * @brief Initialize an Iterative Closest Point Algorithm Object.
 		 *
-		 * @param pose_dim Poose Dimension
+		 * @param pose_dim Pose Dimension
 		 * **/	
 		ICP(int pose_dim);
 
@@ -71,29 +74,28 @@ class ICP {
 		/**
 		 * @brief Run Point Cloud Registration with Known Data Association.
 		 *
-		 * @param 
+		 * @param RefPointSet Reference Point Set
+		 * @param NewPointSet New Point Set
 		 *
 		 * @return ** void
 		 */
-		void RunSVDAlign(PointCloud TruePointSet, PointCloud EstimatedPointSet);
+		void RunSVDAlign(PointCloud RefPointSet, PointCloud NewPointSet);
 
 
 
 		/**
 		 * @brief Run Point Cloud Registration with Unkown Data Association.
 		 *
-		 * @param 
+		 * @param NewPointCloud New Point Cloud
 		 *
 		 * @return ** void
 		 */
-		void RunSVD(PointCloud EstimatedPointCloud);
+		void RunSVD(PointCloud NewPointCloud);
 
 		
 
 		/**
 		 * @brief Run Point Cloud Registration using a Non-Linear Least Squares apprroach.
-		 *
-		 * @param
 		 *
 		 * @return ** void
 		 */

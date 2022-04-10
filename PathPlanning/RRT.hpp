@@ -61,19 +61,22 @@ class RRT {
 		vector<int> Get_Neighbors(float search_radius, Node randPos); 
 
 		/**
-		 * @brief 
+		 * @brief Searches through the list of vertices for the vertex with the best cost
+         *          (i.e. the smallest distance back to the start position).
 		 *
-		 * @param neighbors List of vectors within the search radius of a random node.
+		 * @param neighbors List of vertices within the search radius of a random node.
+         * @param randPos The random node at the center of the search radius.
 		 *
 		 * @return ** int - Index of neighbor with best Cost
 		 */
-    	int Get_BestNeighbor(vector<int> neighbors);
+    	int Get_BestNeighbor(vector<int> neighbors, Node randPos);
 
 		/**
-		 * @brief 
+		 * @brief Reconnects a given node to whichever one produces the shortest path 
+         *          back to the start.
 		 *
-		 * @param neighbors 
-		 * @param nodeIndex 
+		 * @param neighbors List of vertices within the search radius of a random node.
+		 * @param nodeIndex The node to rewire
 		 *
 		 * @return ** void 
 		 */
@@ -82,8 +85,8 @@ class RRT {
 		/**
 		 * @brief Calculate the Euclidean Distancee between two Nodes
 		 *
-		 * @param node_a
-		 * @param node_b
+		 * @param node_a Node A
+		 * @param node_b Node B
 		 *
 		 * @return ** float - The distance between 2 nodes.
 		 * **/
@@ -113,12 +116,13 @@ class RRT {
         void Run_RRT(Node start, Node goal, float maxConnectionDistance);
 
 		/**
-		 * @brief 
+		 * @brief Runs an optimized version of RRT that provides a shorter path to the goal than
+         *          RRT.
 		 *
-		 * @param start
-		 * @param goal
-		 * @param maxConnectionDistance
-		 * @param search_radius
+		 * @param start Start Coordinates
+		 * @param goal Goal Coordinates
+		 * @param maxConnectionDistance The max distance nodes are allowed to be from each other.
+		 * @param search_radius The search radius distance.
 		 *
 		 * @return ** void 
 		 */

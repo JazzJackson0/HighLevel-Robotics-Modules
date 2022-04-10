@@ -13,7 +13,7 @@ std::vector<float> PoseGraphOptSLAM::Get_PoseData() {
 
 
 
-void PoseGraphOptSLAM::BuildErrorFunction(VectorXf MeasuredPose, float trans_vel, float rot_vel) {
+void PoseGraphOptSLAM::BuildErrorFunction(VectorXf MeasuredPose, OdometryReadng odom) {
 	
 	// Initialize each element in X as an Auto-Diff Object (Equivalent to a variable x)
 	for (size_t i = 0; i < PoseDimension; i++) {

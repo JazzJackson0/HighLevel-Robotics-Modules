@@ -106,13 +106,13 @@ template <typename T, typename Z> class Graph {
     public:
 
         /**
-         * @brief 
+         * @brief Initialize a Graph
          * 
          */
         Graph();
 
         /**
-         * @brief Create a Graph
+         * @brief Initialize a Graph
          * 
          * @param state Sets Graph to be Directed (TRUE) or Undirected (FALSE) 
          * 

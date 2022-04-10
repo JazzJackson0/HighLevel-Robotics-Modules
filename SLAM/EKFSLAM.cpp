@@ -2,13 +2,13 @@
 #include <Eigen/src/Core/Matrix.h>
 #include <cmath>
 
-VectorXf EKFSlam::UpdatePose(VectorXf MeasuredPose, float translation, float rotation) {
+VectorXf EKFSlam::UpdatePose(VectorXf MeasuredPose, OdometryReadng odom) {
 	
 	VectorXf UpdatedPose(PoseDimensions);
-	UpdatedPose[0] = (MeasuredPose[0] + (-1*(translation / rotation)) * CppAD::sin(Xg[2]) 
-			+ (-1*(translation / rotation)) * CppAD::sin(Xg[2] + rotation * time_interval) );
-	UpdatedPose[1] = (MeasuredPose[1] + (-1*(translation / rotation)) * CppAD::cos(Xg[2]) 
-			+ (-1*(translation / rotation)) * CppAD::cos(Xg[2] + rotation * time_interval) );
+	UpdatedPose[0] = (MeasuredPose[0] + (-1*(translation / rotation)) * sin(MeasuredPose[2]) 
+			+ (-1*(translation / rotation)) * sin(MeasuredPose[2] + rotation * time_interval) );
+	UpdatedPose[1] = (MeasuredPose[1] + (-1*(translation / rotation)) * cos(MeasuredPose[2]) 
+			+ (-1*(translation / rotation)) * cos(MeasuredPose[2] + rotation * time_interval) );
 	UpdatedPose[2] = (MeasuredPose[2] + rotation * time_interval);
 
 	return UpdatedPose;
@@ -16,7 +16,8 @@ VectorXf EKFSlam::UpdatePose(VectorXf MeasuredPose, float translation, float rot
 
 
 
-VectorXf EKFSlam::UpdateLandmarkObservation(VectorXf robot_pose_est, VectorXf landmark_position_est) {
+VectorXf EKFSlam::UpdateLandmarkObservation(VectorXf robot_pose_est, 
+	VectorXf landmark_position_est) {
 
 	VectorXf UpdatedObservation(LandmarkDimensions);
 	VectorXf Range(LandmarkDimensions);
@@ -35,7 +36,7 @@ VectorXf EKFSlam::UpdateLandmarkObservation(VectorXf robot_pose_est, VectorXf la
 
 
 
-void EKFSlam::BuildUpdateFunctionFor_G(PosePlus MeasuredPose, float translation, float rotation) {
+void EKFSlam::BuildUpdateFunctionFor_G(PosePlus MeasuredPose, OdometryReadng odom) {
 	
 	// Initialize each element in X as an Auto-Diff Object (Equivalent to a variable x)
 	for (size_t i = 0; i < PoseDimensions; i++) {
@@ -66,7 +67,7 @@ void EKFSlam::BuildUpdateFunctionFor_G(PosePlus MeasuredPose, float translation,
 void EKFSlam::BuildObservationFunctionFor_H(PosePlus MeasuredPose) {
 	
 	// Initialize each element in X as an Auto-Diff Object (Equivalent to a variable x)
-	for (size_t i = 0; i < PoseDimensions; i++) {
+	for (size_t i = 0; i < PoseDimensions + LandmarkDimensions; i++) {
 		
 		Xh[i] = AD<float>(0);
 	}
@@ -77,11 +78,9 @@ void EKFSlam::BuildObservationFunctionFor_H(PosePlus MeasuredPose) {
 	Independent(Xh);
 
 	// Set up your functions that will be Auto-Differentiated
-	Yh[0] = MeasuredPose[0] - CppADD::cos(Xh[0]);
-	Yh[1] = MeasuredPose[1] - ;
-	Yh[2] = MeasuredPose[2] - ;
-	Yh[3] = ;
-
+		// X = (x, y, angle, landmark_x, landmark_y)
+	Yh[0] = CppAD::sqrt( CppAD::pow(X[0], 2) + CppAD::pow(X[1], 2) );
+	Yh[1] = CppAD::atan2(X[1], X[0]) - X[2];
 
 	// Creates f: x -> y and stops tape recording
 		// Performs the derivative calculations on the empty x variables.
@@ -90,7 +89,7 @@ void EKFSlam::BuildObservationFunctionFor_H(PosePlus MeasuredPose) {
 
 
 
-void EKFSlam::Prediction(VectorXf current_pose, float trans_vel, float rot_vel) {
+void EKFSlam::Prediction(VectorXf current_pose, OdometryReadng odom) {
 
 	// STEP 1: Update the State Vector. -----------------
 	VectorXf updated_pose = UpdatePose(current_pose, trans_vel, rot_vel);
@@ -112,7 +111,6 @@ void EKFSlam::Correction() {
 	
 	// STEP 1: Take the observation function h() which computes the expected observation.  -----------------
 
-
 	// STEP 2: Compute Jacobian of Observation function h() - H -----------------
 	MatrixXf H = CalculateJacobian(OBSERVATION, StateVector);
 		// Map the low dimensional Jacobian back to Higher dim F
@@ -131,6 +129,8 @@ void EKFSlam::Correction() {
 
 MatrixXf EKFSlam::CalculateJacobian(FunctionType f_type, StateVec StateVector) {
 	
+	int JacobianParameterDimension;
+
 	VectorXf robot_pose(PoseDimensions, 1);
 	for (int i = 0; i < robot_pose.rows(); i++) {
 		
@@ -140,18 +140,17 @@ MatrixXf EKFSlam::CalculateJacobian(FunctionType f_type, StateVec StateVector) {
 		}
 	}
 
-
 	// STEP 1: Set Up Update Function----------------------------------------------
 	if (f_type == UPDATE) {
-		
 		BuildUpdateFunctionFor_G(robot_pose, 
 				StateVector.Pose.RobotTranslation, 
-				StateVector.Pose.RobotRotation);	
+				StateVector.Pose.RobotRotation);
+				JacobianParameterDimension = PoseDimensions;	
 	}
 
 	else if (f_type == OBSERVATION) {
-		
-		BuildObservationFunctionFor_H(robot_pose);	
+		BuildObservationFunctionFor_H(robot_pose);
+		JacobianParameterDimension = PoseDimensions + LandmarkDimensions;	
 	}
 	
 	// STEP 2: Compute the Jacobian of the Update Function ------------------------
@@ -162,8 +161,8 @@ MatrixXf EKFSlam::CalculateJacobian(FunctionType f_type, StateVec StateVector) {
 	// Create vector of variables Jacobian will be calculated with respect to ( G(x) ).
 	// Holds the value of the corresponding Independent Variable's index.
 	// (e.g., 0 = X[0], 1 = X[1], etc.)
-	std::vector<float> WithRespectTo(PoseDimensions);
-	for (size_t i = 0; i < PoseDimensions; i++) {
+	std::vector<float> WithRespectTo(JacobianParameterDimension);
+	for (size_t i = 0; i < JacobianParameterDimension; i++) {
 		WithRespectTo[i] = (float) i;
 	}
 		
@@ -227,7 +226,8 @@ EKFSlam(StateVec initial_state, int pose_dim, int landmark_dim,
 
 		// Set up Mapping Functions
 		UpdateMappingFunction.Zero(PoseDimensions, PoseDimensions + (2 * NumOfLandmarks));
-		ObservationMappingFunction.Zero(PoseDimensions + LandmarkDimensions, PoseDimensions + (2 * NumOfLandmarks));
+		ObservationMappingFunction.Zero(PoseDimensions + LandmarkDimensions, 
+			PoseDimensions + (2 * NumOfLandmarks));
 
 		for (int i = 0; i < PoseDimensions; i++) { 
 			UpdateMappingFunction[i][i] = 1;
