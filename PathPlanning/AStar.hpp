@@ -4,6 +4,7 @@
 #include <cmath>
 #include <stack>
 #include <set>
+#include <cfloat>
 using std::pair;
 using std::stack;
 using std::make_pair;

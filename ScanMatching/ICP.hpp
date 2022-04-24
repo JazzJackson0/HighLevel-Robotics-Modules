@@ -1,10 +1,14 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
-#include <Eigen/Dense>
-#include <Eigen/SVD>
-#include <Eigen/QR>
+#include <utility>
+
+#include </usr/include/eigen3/Eigen/Dense>
+#include </usr/include/eigen3/Eigen/SVD>
+#include </usr/include/eigen3/Eigen/QR>
+
 #include <cppad/cppad.hpp>
+
 using std::vector;
 using std::pair;
 using Eigen::VectorXf;
@@ -17,33 +21,11 @@ class ICP {
 	
 		int PoseDimension;
 		int ErrorParameterNum = 3;
-		VecAD<float> X((size_t)PoseDimension); // X = (t_x, t_y, angle)
-		VecAD<float> Y(); // Assign correct size
+		std::vector<AD<float>> X; // X = (t_x, t_y, angle)
+		std::vector<AD<float>> Y;
 		ADFun<float> ErrorFunction;		
 
 	private:
-
-
-		/**
-		 * @brief Builds the error function for the Non-Linear Least Squares ICP method.
-		 *
-		 * @param MeasuredPose
-		 *
-		 * @return ** void
-		 */
-		void BuildErrorFunction(VectorXf MeasuredPose); 
-		 
-
-
-		/**
-         * @brief Creates and solves the Jacobian for a given function.
-		 *
-         * @param StateVector The vector of poses to be optimized.
-         * @return ** MatrixXf - Jacobian 
-         */
-		MatrixXf CalculateJacobian(FunctionType f_type, std::vector<VectorXf> StateVector); 
-
-
 
 		/**
 		 * @brief Calculates the correspondences between two point clouds and returns subsets
@@ -57,6 +39,29 @@ class ICP {
 		pair<PointCloud, PointCloud>  Calculate_Correspondences(PointCloud RefPointCloud, 
 			PointCloud NewPointCloud);
 
+
+
+		/**
+		 * @brief Builds the error function for the Non-Linear Least Squares ICP method.
+		 *
+		 * @param NewPoint 
+		 * @param ReferencePoint 
+		 *
+		 * @return ** void
+		 */
+		void BuildErrorFunction(VectorXf NewPoint, VectorXf ReferencePoint); 
+		 
+
+
+		/**
+         * @brief Creates and solves the Jacobian for a given function.
+		 *
+         * @param NewPoint 
+		 * @param ReferencePoint 
+		 * 
+         * @return ** MatrixXf - Jacobian 
+         */
+		MatrixXf CalculateJacobian(VectorXf NewPoint, VectorXf ReferencePoint); 
 
 
 	public:
@@ -97,16 +102,19 @@ class ICP {
 		/**
 		 * @brief Run Point Cloud Registration using a Non-Linear Least Squares apprroach.
 		 *
+		 * @param RefPointCloud Reference Point Cloud
+		 * @param NewPointCloud New Point Cloud
+		 * 
 		 * @return ** void
 		 */
-		void RunLeastSquares();
+		void RunLeastSquares(PointCloud RefPointCloud, PointCloud NewPointCloud);
 
 };
 
 
 struct point_cloud {
 
-	vector<VectorXf> Points;
-	vector<float> Weights;
+	std::vector<VectorXf> Points;
+	std::vector<float> Weights;
 };
 

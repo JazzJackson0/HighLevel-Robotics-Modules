@@ -44,7 +44,6 @@ bool A_Star::isValid(int rowNum, int colNum) {
 
 bool A_Star::isBlocked(int rowNum, int colNum) {
     return Grid[rowNum][colNum] == 1;
-:w
 }
 
 

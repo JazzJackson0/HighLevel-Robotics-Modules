@@ -205,7 +205,7 @@ template <typename T, typename Z> class Graph {
 		 *
 		 * @return ** void
 		 */
-		void Disconnect_Vertices(int index1, int index2) {
+		void Disconnect_Vertices(int index1, int index2);
 
 
         /**

@@ -63,9 +63,9 @@ class Bug {
 		/**
 		 * @brief Get current range scan  
 		 *
-		 * @return ** DistSensorData
+		 * @return ** vector<vector<float>> - DistSensorData
 		 */
-		vector<float> Get_RangeScanData();
+		vector<vector<float>> Get_RangeScanData();
 
 
 
@@ -161,10 +161,12 @@ class Bug {
 
 		/**
 		 * @brief Get the index of the beam closest to goal by calculating the heuristic distance function.
+		 * 
+		 * @param scan Range Scan
 		 *
 		 * @return ** int - Index of beam closest to goal point.
 		 */
-		int Get_BeamClosestToGoal(vector<float> scan);
+		int Get_BeamClosestToGoal(vector<vector<float>> scan);
 
 
 		/**

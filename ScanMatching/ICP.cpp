@@ -1,5 +1,44 @@
 #include "ICP.hpp"
-#include <utility>
+
+pair<PointCloud, PointCloud>  ICP::Calculate_Correspondences(PointCloud RefPointCloud, 
+	PointCloud NewPointCloud) {
+	
+	int ref_size = RefPointCloud.Points.size();
+	int new_size = NewPointCloud.Points.size();
+	pair<PointCloud, PointCloud> Correspondences;
+	PointCloud PointSet_New;
+
+	// Loop through all points in Reference Point Cloud
+	for (int i = 0; i < ref_size; i++) {
+		
+		// Get a Point for comparison with New Cloud
+		VectorXf ref_point = RefPointCloud.Points[i]; 
+		float min_dist = std::numeric_limits<float>::max();
+		int corresponding_indx = -1;
+
+		// Loop through all points in New Point Cloud
+		for (int j = 0; j < new_size; j++) {
+			
+			// Compare every point in New Point Cloud with Point from Reference.
+			VectorXf new_point = NewPointCloud.Points[j]; 
+			float dist = std::sqrt( pow((ref_point[0] - new_point[0]), 2) + pow((ref_point[1] - new_point[1]), 2)
+				+ pow((ref_point[2] - new_point[2]), 2) );
+
+			if (dist < min_dist) {
+				min_dist = dist;
+				corresponding_indx = j;
+			}
+		}
+		
+		// Pull out the Point Set in B that corresponds directly with Point Cloud A
+		PointSet_New.Points.push_back(NewPointCloud.Points[corresponding_indx]);
+		PointSet_New.Weights.push_back(NewPointCloud.Weights[corresponding_indx]);
+	}
+
+	Correspondences = std::make_pair(RefPointCloud, PointSet_New);
+	return Correspondences;
+}
+
 
 
 void ICP::BuildErrorFunction(VectorXf NewPoint, VectorXf ReferencePoint) {
@@ -27,10 +66,10 @@ void ICP::BuildErrorFunction(VectorXf NewPoint, VectorXf ReferencePoint) {
 
 	
 
-MatrixXf ICP::CalculateJacobian(FunctionType f_type, std::vector<VectorXf> StateVector) {
+MatrixXf ICP::CalculateJacobian(VectorXf NewPoint, VectorXf ReferencePoint) {
 	
 	// STEP 1: Set Up Update Function----------------------------------------------	
-	BuildErrorFunction(StateVector.RobotPose);	
+	BuildErrorFunction(NewPoint, ReferencePoint);	
 	
 	// STEP 2: Compute the Jacobian of the Update Function ------------------------
 	int rows = PoseDimension;
@@ -46,49 +85,19 @@ MatrixXf ICP::CalculateJacobian(FunctionType f_type, std::vector<VectorXf> State
 	}
 		
 	// Compute the Jacobian***********
-	size_t n_color = ErrorFunction.Jacobian(WithRespectTo);
-
+	std::vector<float> jac(2 * PoseDimension);
 	MatrixXf Jac;
-	
-	// Return a Matrix
-	return Jac;
-}
 
+	jac = ErrorFunction.Jacobian(WithRespectTo);
 
+	Jac = MatrixXf::Zero(2, PoseDimension);
+	for (int i = 0; i < jac.size(); i++) {
 
-
-pair<PointCloud, PointCloud>  ICP::Calculate_Correspondences(PointCloud RefPointCloud, 
-	PointCloud NewPointCloud) {
-	
-	int a_size = RefPointCloud.Points.size();
-	int b_size = NewPointCloud.Points.size();
-	pair<PointCloud, PointCloud> Correspondences;
-	PointCloud PointSet_New;
-
-	for (int i = 0; i < a_size; i++) {
-		
-		VectorXf point_a = RefPointCloud.Points[i]; 
-		float min_dist = std::numeric_limits<float>::max();
-		int corresponding_indx = -1;
-
-		for (int j = 0; j < b_size; j++) {
-			
-			VectorXf point_b = NewPointCloud.Points[j]; 
-			float dist = std::sqrt( (point_a * point_a) + (point_b * point_b) );
-
-			if (dist < min_dist) {
-				min_dist = dist;
-				corresponding_indx = j;
-			}
-		}
-		
-		// Pull out the Point Set in B that corresponds directly with Point Cloud A
-		PointSet_New.Points.push_back(PointSetB.Points[j]);
-		PointSet_New.Weights.pop_back(PointSetB.Weights[j]);
+		Jac << jac[i];
 	}
 
-	Correspondences = std::make_pair(RefPointCloud, PointSet_New);
-	return Correspondences;
+	// Return a Matrix
+	return Jac;
 }
 
 
@@ -96,6 +105,11 @@ pair<PointCloud, PointCloud>  ICP::Calculate_Correspondences(PointCloud RefPoint
 ICP::ICP(int pose_dim) {
 	
 	PoseDimension = pose_dim;
+
+	std::vector<AD<float>> xs(PoseDimension);
+	std::vector<AD<float>> ys(PoseDimension);
+	X = xs;
+	Y = ys;
 }
 
 
@@ -159,18 +173,19 @@ void ICP::RunSVD(PointCloud NewPointCloud) {
 
 
 
-void ICP::RunLeastSquares() {
-
-	// A Very Rough Draft. I'm just assuming a while loop is the best form for this
+void ICP::RunLeastSquares(PointCloud RefPointCloud, PointCloud NewPointCloud) {
+	
+	pair<PointCloud, PointCloud>  point_sets = Calculate_Correspondences(RefPointCloud, NewPointCloud);
+	MatrixXf H_sum;
+	VectorXf b_sum;
+	int i = 0;
+	
 	while () { // While not converged
 			
-		MatrixXf H_sum;
-		VectorXf b_sum;
-		
 		// Compute sum of H and b over all N points.
-		for (int n = 0; n < someethinglsakjdf; n++) {
+		for (int n = 0; n < point_sets.first.Points.size() ; n++) {
 			
-			MatrixXf Jac = CalculateJacobian();
+			MatrixXf Jac = CalculateJacobian(point_sets.first.Points[n], point_sets.second.Points[n]);
 			MatrixXf H = Jac.transpose() * Jac;
 			VectorXf b = Jac.transpose() * lksadjfasdf;
 
@@ -182,6 +197,7 @@ void ICP::RunLeastSquares() {
 		VectorXf x_uptate = H_sum.colPivHouseholderQr().solve(b_sum);	
 
 		// Update Parameters
+		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 	}

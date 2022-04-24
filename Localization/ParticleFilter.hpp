@@ -1,6 +1,8 @@
 #pragma once
 #include <iostream>
 #include <random>
+#include <chrono>
+#include <time.h>
 #include <vector>
 #include <cmath>
 using std::vector;
@@ -13,8 +15,6 @@ typedef struct odometry_reading OdometryReadng;
 class ParticleFilter {
 
     private:
-		std::default_random_engine generator;
-		std::normal_distribution<float> distribution();
 		vector<Particle> ParticleSet;
 		int MaxParticles;
 		int PoseDimensions;
@@ -23,6 +23,8 @@ class ParticleFilter {
 		float weight_std_dev = 0.5;
 		float range_coef; // How much range weight impacts total particle weight
 		float bearing_coef; // How much bearing weight impacts total particle weight
+		int MapWidth;
+		int MapHeight;
         
 		
 		/**

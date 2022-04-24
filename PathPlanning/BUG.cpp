@@ -1,5 +1,4 @@
 #include "BUG.hpp"
-#include <limits>
 
 DistSensorData Bug::Get_DistSensorData() {
 	
@@ -15,7 +14,7 @@ Pose Bug::Get_CurrentPosition() {
 
 
 
-vector<float> Bug::Get_RangeScanData() {
+vector<vector<float>> Bug::Get_RangeScanData() {
 
 	// Receive Scan data from ... somewhere
 }
@@ -113,14 +112,14 @@ void Bug::UpdateCurrentAngleToGoal() {
 
 
 
-int Bug::Get_BeamClosestToGoal(vector<float> scan) {
+int Bug::Get_BeamClosestToGoal(vector<vector<float>> scan) {
 
 	float min_beam = std::numeric_limits<float>::max();
 	int best_index = -1;
 	for (int i = 0; i < scan.size(); i++) {
 		
-		int x = (int) scan[i] * cos();
-		int y = (int) scan[i] * sin();
+		int x = (int) scan[i][0] * cos(scan[i][1]);
+		int y = (int) scan[i][0] * sin(scan[i][1]);
 		float dist = Get_GoalDistance(make_pair(x, y));
 		if (dist < min_beam) {
 			
@@ -147,7 +146,7 @@ void Bug::FollowWall(BugType type) {
 	while (1) {
 		
 		DistSensorData currentData = Get_DistSensorData();
-		vector<float> currentScan = Get_RangeScanData();
+		vector<vector<float>> currentScan = Get_RangeScanData();
 
 		if (type == BUG1 || type == TAN) { 
 		
@@ -200,8 +199,8 @@ void Bug::FollowWall(BugType type) {
 			if (TAN) {
 
 				int index = Get_BeamClosestToGoal(currentScan);
-				firstMinScanPoint.first = (int) currentScan[index] * cos();
-				firstMinScanPoint.second = (int) currentScan[index] * sin();
+				firstMinScanPoint.first = (int) currentScan[index][0] * cos(currentScan[index][1]);
+				firstMinScanPoint.second = (int) currentScan[index][0] * sin(currentScan[index][1]);
 
 				if (Get_GoalDistance(left_scanPoint) <= Get_GoalDistance(right_scanPoint)) { TurnLeft(); }
 
@@ -245,8 +244,8 @@ void Bug::FollowWall(BugType type) {
 		else if (type == TAN) {
 
 			int index = Get_BeamClosestToGoal(currentScan);
-			int x = currentScan[index] * cos();
-			int y = currentScan[index] * sin();
+			int x = currentScan[index][0] * cos(currentScan[index][1]);
+			int y = currentScan[index][0] * sin(currentScan[index][1]);
 
 			if (Get_GoalDistance(make_pair(x, y)) < Get_GoalDistance(firstMinScanPoint)) {
 				
@@ -342,12 +341,12 @@ void Bug::Bug2() {
 
 void Bug::TangentBug() {
 	
-	vector<float> range_scan = Get_RangeScanData();
+	vector<vector<float>> range_scan = Get_RangeScanData();
 	TurnInDirection( Get_GoalDirection() );
-	left_scanPoint.first = range_scan.front() * cos();
-	left_scanPoint.second = range_scan.front() * sin();
-	right_scanPoint.first = range_scan.back() * cos();
-	right_scanPoint.second = range_scan.back() * sin();
+	left_scanPoint.first = range_scan.front()[0] * cos(range_scan.front()[1]);
+	left_scanPoint.second = range_scan.front()[0] * sin(range_scan.front()[1]);
+	right_scanPoint.first = range_scan.back()[0] * cos(range_scan.back()[1]);
+	right_scanPoint.second = range_scan.back()[0] * sin(range_scan.back()[1]);
 
 	// While not at goal, Go to Goal
 	while ( !(Get_CurrentPosition().position.first == goalPoint.first && 

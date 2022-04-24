@@ -2,8 +2,9 @@
 #include <iostream>
 #include <cmath>
 #include <limits>
+#include <utility>
+#include <vector>
 #include <../DataStructures/Graph.hpp>
-using std::pair;
 using std::make_pair;
 
 typedef struct node Node;
@@ -67,9 +68,10 @@ class RRT {
 		 * @param neighbors List of vertices within the search radius of a random node.
          * @param randPos The random node at the center of the search radius.
 		 *
-		 * @return ** int - Index of neighbor with best Cost
+		 * @return ** pair<int, float> - (Index of neighbor with best Cost, Distance between that node 
+         *                                  and the random position)
 		 */
-    	int Get_BestNeighbor(vector<int> neighbors, Node randPos);
+    	pair<int, float> Get_BestNeighbor(vector<int> neighbors, Node randPos);
 
 		/**
 		 * @brief Reconnects a given node to whichever one produces the shortest path 
@@ -77,10 +79,11 @@ class RRT {
 		 *
 		 * @param neighbors List of vertices within the search radius of a random node.
 		 * @param nodeIndex The node to rewire
+         * @param randPos The random node at the center of the search radius.
 		 *
 		 * @return ** void 
 		 */
-		void Rewire_Neighbors(vector<int> neighbors, int nodeIndex);
+		void Rewire_Neighbors(vector<int> neighbors, int nodeIndex, Node randPos);
 
 		/**
 		 * @brief Calculate the Euclidean Distancee between two Nodes

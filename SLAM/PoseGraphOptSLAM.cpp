@@ -1,22 +1,32 @@
 #include "PoseGraphOptSLAM.hpp"
-#include <Eigen/src/Core/util/Constants.h>
-#include <bits/c++config.h>
-#include <cppad/core/independent/independent.hpp>
-#include <cppad/core/sparse_jac.hpp>
-#include <cstddef>
 
+VectorXf PoseGraphOptSLAM::UpdatePose(VectorXf MeasuredPose, OdometryReadng odom) {
+	
+	VectorXf UpdatedPose(PoseDimensions);
+	float trans = odom.RobotTranslation;
+	float rot = odom.RobotRotation;
+	UpdatedPose[0] = (MeasuredPose[0] + (-1*(trans / rot)) * sin(MeasuredPose[2]) 
+			+ (-1*(trans / rot)) * sin(MeasuredPose[2] + rot * time_interval) );
+	UpdatedPose[1] = (MeasuredPose[1] + (-1*(trans / rot)) * cos(MeasuredPose[2]) 
+			+ (-1*(trans / rot)) * cos(MeasuredPose[2] + rot * time_interval) );
+	UpdatedPose[2] = (MeasuredPose[2] + rot * time_interval);
 
-
-std::vector<float> PoseGraphOptSLAM::Get_PoseData() {
-
+	return UpdatedPose;
 }
 
+VectorXf PoseGraphOptSLAM::GetErrorVector(VectorXf MeasuredPose, OdometryReadng odom) {
+
+	return MeasuredPose - UpdatePose(PreviousPose, odom);
+}
 
 
 void PoseGraphOptSLAM::BuildErrorFunction(VectorXf MeasuredPose, OdometryReadng odom) {
 	
+	float trans = odom.RobotTranslation;
+	float rot = odom.RobotRotation;
+	
 	// Initialize each element in X as an Auto-Diff Object (Equivalent to a variable x)
-	for (size_t i = 0; i < PoseDimension; i++) {
+	for (size_t i = 0; i < PoseDimensions; i++) {
 		
 		X[i] = AD<float>(0);
 	}
@@ -27,11 +37,11 @@ void PoseGraphOptSLAM::BuildErrorFunction(VectorXf MeasuredPose, OdometryReadng 
 	Independent(X);
 
 	// Set up your functions that will be Auto-Differentiated
-	Y[0] = MeasuredPose[0] - (PreviousPose[0] + (-1*(trans_vel / rot_vel)) * CppAD::sin(X[2]) 
-			+ (-1*(trans_vel / rot_vel)) * CppAD::sin(X[2] + rot_vel * time_interval) );
-	Y[1] = MeasuredPose[1] - (PreviousPose[1] + (-1*(trans_vel / rot_vel)) * CppAD::cos(X[2]) 
-			+ (-1*(trans_vel / rot_vel)) * CppAD::cos(X[2] + rot_vel * time_interval) );
-	Y[2] = MeasuredPose[2] - (PreviousPose[2] + rot_vel * time_interval);
+	Y[0] = MeasuredPose[0] - (PreviousPose[0] + (-1*(trans / rot)) * CppAD::sin(X[2]) 
+			+ (-1*(trans / rot)) * CppAD::sin(X[2] + rot * time_interval) );
+	Y[1] = MeasuredPose[1] - (PreviousPose[1] + (-1*(trans / rot)) * CppAD::cos(X[2]) 
+			+ (-1*(trans / rot)) * CppAD::cos(X[2] + rot * time_interval) );
+	Y[2] = MeasuredPose[2] - (PreviousPose[2] + rot * time_interval);
 
 	// Creates f: x -> y and stops tape recording
 		// Performs the derivative calculations on the empty x variables.
@@ -40,14 +50,14 @@ void PoseGraphOptSLAM::BuildErrorFunction(VectorXf MeasuredPose, OdometryReadng 
 
 
 
-std::vector<VectorXf> ICP(void) {
+std::vector<VectorXf> PoseGraphOptSLAM::ICP(void) {
 	
 
 } 
 
 
 
-std::vector<VectorXf> PoseGraphOptSLAM::Optimize(std::vector<VectorXf> StateVector) {
+std::vector<VectorXf> PoseGraphOptSLAM::Optimize(std::vector<VectorXf> StateVector, pair<int, int> i_and_j, OdometryReadng odom) {
 
 	std::vector<VectorXf> StateVectorUpdate;
 	pair<Eigen::SparseMatrix<float, Eigen::RowMajor>, VectorXf> result;
@@ -55,11 +65,13 @@ std::vector<VectorXf> PoseGraphOptSLAM::Optimize(std::vector<VectorXf> StateVect
 	// While Nodes Not Converged
 	while () { // Populate while loop
 
+		// Likely need a for loop to loop over the entire State Vector and adjust every Pose !!!!!!!!!!
+		
 		// Build Linear System
-		result = BuildLinearSystem(StateVector);
+		result = BuildLinearSystem(StateVector, odom);
 
-		// Solve the System
-		LLT<MatrixXf> llt;
+		// Solve the System x = H^-1 * b
+		LLT<Eigen::MatrixXf> llt;
 		llt.compute(result.first);
 		StateVectorUpdate = llt.solve(result.second);
 
@@ -73,27 +85,27 @@ std::vector<VectorXf> PoseGraphOptSLAM::Optimize(std::vector<VectorXf> StateVect
 
 
 
-pair<Eigen::SparseMatrix<float>, Eigen::RowMajor PoseGraphOptSLAM::BuildLinearSystem(
-		std::vector<VectorXf> StateVector) {
+pair<Eigen::SparseMatrix<float, Eigen::RowMajor>, VectorXf> PoseGraphOptSLAM::BuildLinearSystem(
+		std::vector<VectorXf> StateVector, OdometryReadng odom) {
 	
 	pair<Eigen::SparseMatrix<float, Eigen::RowMajor>, VectorXf> result;
 
 	// STEP 1: Set Up Error Function----------------------------------------------
 	float trans_vel = Get_PoseData()[3];
 	float rot_vel = Get_PoseData()[4];
-	BuildErrorFunction(StateVector.front(), trans_vel, rot_vel);	
+	BuildErrorFunction(StateVector.front(), odom);	
 	
 	
 	// STEP 2: Compute the Jacobian of the Error Function ------------------------
-	int rows = PoseDimension;
+	int rows = PoseDimensions;
 	int cols = 2;
-	int nonZeroElements = 2 * PoseDimension;
+	int nonZeroElements = 2 * PoseDimensions;
 	
 	// Create vector of variables Jacobian will be calculated with respect to ( J(x) ).
 	// Holds the value of the corresponding Independent Variable's index.
 	// (e.g., 0 = X[0], 1 = X[1], etc.)
-	std::vector<float> WithRespectTo(PoseDimension);
-	for (size_t i = 0; i < PoseDimension; i++) {
+	std::vector<float> WithRespectTo(PoseDimensions);
+	for (size_t i = 0; i < PoseDimensions; i++) {
 		WithRespectTo[i] = (float) i;
 	}
 
@@ -131,14 +143,14 @@ pair<Eigen::SparseMatrix<float>, Eigen::RowMajor PoseGraphOptSLAM::BuildLinearSy
 	sparse2eigen(SparseMatrix, Jac);
 
 	// STEP 3: Linearize the Error Function -----------------
-	VectorXf LinearizedErrorVector = ErrorVector + (Jac * variationAroundGuess);
+	VectorXf LinearizedErrorVector = GetErrorVector(something, odom) + (Jac * VariationAroundGuess);
 
 	// STEP 4: Create the H Matrix & b vector -----------------
 	// Compute Hessian			
 	Eigen::SparseMatrix<float, Eigen::RowMajor> Hess = Jac.transpose() * (something * Jac);
 
 	// Compute b
-	VectorXf b = LinearizedErrorVector.transpose() * (lasdjfa * Jac);
+	VectorXf b = LinearizedErrorVector.transpose() * (somethingElse * Jac);
 
 	result.first = Hess;
 	result.second = b;
@@ -147,12 +159,19 @@ pair<Eigen::SparseMatrix<float>, Eigen::RowMajor PoseGraphOptSLAM::BuildLinearSy
 
 
 
-PoseGraphOptSLAM::PoseGraphOptSLAM(int max_nodes, int pose_dimension, int independent_val_num) {
+PoseGraphOptSLAM::PoseGraphOptSLAM(int max_nodes, int pose_dimension, int independent_val_num,
+					int guess_variation) {
 	
 	MaxStateVectorSize_N = max_nodes;
 	MaxEdges = MaxStateVectorSize_N * 2;
-	PoseDimension = pose_dimension;
+	PoseDimensions = pose_dimension;
 	PreviousPose.setZero(pose_dimension);
+	VariationAroundGuess = guess_variation;
+
+	std::vector<AD<float>> xs(PoseDimensions);
+	std::vector<AD<float>> ys(PoseDimensions);  // Are these Dimensions Correct????????
+	X = xs;
+	Y = ys;
 }
 
 
