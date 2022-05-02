@@ -4,21 +4,25 @@
 #include <vector>
 #include <cstddef>
 #include <bits/c++config.h>
+#include <cmath>
 
 #include </usr/include/eigen3/Eigen/Sparse>
 #include </usr/include/eigen3/Eigen/Dense> // Are both of these needed?
 #include </usr/include/eigen3/Eigen/Cholesky>
 #include </usr/include/eigen3/Eigen/src/Core/util/Constants.h>
 
-#include <cppad/core/sparse_jac.hpp>
 #include <cppad/cppad.hpp>
+#include <cppad/core/sparse_jac.hpp>
 #include <cppad/utility/sparse_rc.hpp>
 #include <cppad/utility/sparse_rcv.hpp>
 #include <cppad/utility/sparse2eigen.hpp>
 
 #include "../DataStructures/Graph.hpp"
 
-using namespace CppAD;
+
+//using CppAD::sparse_rc;
+//using CppAD::sparse_rcv;
+using namespace::CppAD;
 using namespace::Eigen;
 using std::vector;
 using std::pair;
@@ -33,15 +37,15 @@ typedef std::vector<double> ValueVector;
 
 class PoseGraphOptSLAM {
 
-	int MaxStateVectorSize_N;
+	int MaxPoses;
 	int PoseDimensions;     
-	int MaxEdges;
 	float time_interval;
 	VectorXf PreviousPose;
-	std::vector<AD<float>> X;
+	std::vector<AD<float>> X; // x j-i, x ij, y j-i, y ij, theta i, theta j, theta ij
 	std::vector<AD<float>> Y;
 	ADFun<float> ErrorFunction;
 	int VariationAroundGuess;
+	float min_convergence_thresh;
 	
 	private:
 
@@ -56,41 +60,38 @@ class PoseGraphOptSLAM {
 
 
 		/**
-		 * @brief Updates the pose based on a given mathematical motion model / Update Function.
-		 *
-		 * @param MeasuredPose The Previous Pose, that the odometry commands will be applied to.
-		 * @param odom Odometry reading (translation velocity & rotation velocity) 
-		 *
-		 * @return ** VectorXf Updated Pose
+		 * @brief Create a single State Vector from the Graph Nodes
+		 * 
+		 * @param poses The Graph Nodes
+		 * @return ** VectorXf 
 		 */
-		VectorXf UpdatePose(VectorXf MeasuredPose, OdometryReadng odom);
+		VectorXf CreateStateVector(std::vector<VectorXf> poses);
+
 
 		/**
-		 * @brief Output the difference between the measured pose and the predicted pose
-		 * 			in vector form.
+		 * @brief Output the difference between measured pose transformation
+		 * 			and predicted pose transformation.
 		 * 
-		 * @param MeasuredPose The current pose
-		 * @param odom Odometry command to be applied to the previous pose
+		 * @param Pose_i The ith Pose
+		 * @param Pose_j The jth Pose
+		 * @param MeasuredTranslatedVector Change in x, y and theta. Obtained from the given Edge
 		 * @return ** VectorXf The Error Vector
 		 */
-		VectorXf GetErrorVector(VectorXf MeasuredPose, OdometryReadng odom);
+		VectorXf GetErrorVector(VectorXf Pose_i, VectorXf Pose_j, VectorXf MeasuredTranslatedVector);
 
 
 
 		/**
-		 * @brief Computes the difference between the Measured Pose and
-		 * 			the the Predicted Pose (The result of the Observation Function f(x)).
+		 * @brief Computes the difference between the Measured Transformation and
+		 * 			the the Predicted Transformation.
 		 *
 		 * 			||| Observation Function: The mathematical model of the robot's sensing capabilities.
 		 * 			Computes the Predicted Pose of the robot. (i.e., what the
 		 * 			robot expects to observe.)
 		 *
-		 * @param MeasuredPose 
-		 * @param odom Odometry reading (translation velocity & rotation velocity) 
-		 *
 		 * @return ** void
 		 */
-		void BuildErrorFunction(VectorXf MeasuredPose, OdometryReadng odom);
+		void BuildErrorFunction();
 
 
 
@@ -108,27 +109,32 @@ class PoseGraphOptSLAM {
          * @brief The Back End: Uses the Edges/Constraints from the Front End to optimize
          *          the graph and return the corrected poses.
          * 
-         * @param StateVector The vector of poses to be optimized.
-		 * @param i_and_j Indices of the two poses to have their (Observation Based Edge) errors minimized
+         * @param Poses The vector of poses to be optimized. 
+		 * 						(Corresponds to the Vertices of the Graph G{V})
+		 * @param Edges The Graph Edges G{E}
 		 * @param odom Odometry reading (translation velocity & rotation velocity) 
 		 * 
-         * @return ** vector<VectorXf> Updated State Vector 
+         * @return ** VectorXf Updated State Vector 
          */
-		std::vector<VectorXf> Optimize(std::vector<VectorXf> StateVector, pair<int, int> i_and_j, OdometryReadng odom);
+		VectorXf Optimize(std::vector<VectorXf> Poses, std::vector<PoseEdge> Edges, OdometryReadng odom);
 
 
         /**
          * @brief Creates the H matrix and b vector for the Linear system
          *          needed to minimize the error.
          * 
-         * @param StateVector The vector of poses to be optimized.
+         * @param pose_i The ith Pose
+		 * @param pose_j The jth Pose
+		 * @param MeasuredTranslatedVector 
+		 * @param edge_covariance Covariance for the given ij Edge
 		 * @param odom Odometry reading (translation velocity & rotation velocity) 
 		 * 
          * @return ** pair<Eigen::SparseMatrix<float, Eigen::RowMajor>, VectorXf> 
 		 * 				A pair containing the H Matrix and b vector.
          */
 		pair<Eigen::SparseMatrix<float, Eigen::RowMajor>, VectorXf> BuildLinearSystem(
-				std::vector<VectorXf> StateVector, OdometryReadng odom);		
+				VectorXf pose_i, VectorXf pose_j, VectorXf MeasuredTranslatedVector, 
+				MatrixXf edge_covariance, OdometryReadng odom);		
 		
 
     public:
@@ -159,7 +165,8 @@ class PoseGraphOptSLAM {
 
 
 struct pose_edge {
-    VectorXf Pose; // Pose.
+    pair<int, int> PoseIndices; // Indices of the 2 Poses
+	VectorXf TransformationMatrix; // Transformation Matrix.
     MatrixXf NoiseInfoMatrix; // Encodes the uncertainty in the transformation to the Pose.
 };
 
