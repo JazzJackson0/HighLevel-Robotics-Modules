@@ -1,5 +1,16 @@
 #include "ICP.hpp"
 
+PointCloud Update_PointCloud(PointCloud pointCloud, VectorXf x_increment) {
+
+	for (int i = 0; i < pointCloud.Points.size(); i++) {
+		pointCloud.Points[i][0] = x_increment[i];
+		pointCloud.Points[i][1] = x_increment[i + 1];
+		pointCloud.Points[i][2] = x_increment[i + 2];
+	}
+
+	return pointCloud;
+}
+
 pair<PointCloud, PointCloud>  ICP::Calculate_Correspondences(PointCloud RefPointCloud, 
 	PointCloud NewPointCloud) {
 	
@@ -39,9 +50,18 @@ pair<PointCloud, PointCloud>  ICP::Calculate_Correspondences(PointCloud RefPoint
 	return Correspondences;
 }
 
+VectorXf GetErrorVector(VectorXf x, VectorXf ReferencePoint, VectorXf NewPoint) {
+
+	VectorXf error(2);
+	error[0] = cos(x[2]) * NewPoint[0] - sin(x[2]) * NewPoint[1] + x[0] - ReferencePoint[0];
+	error[1] = sin(x[2]) * NewPoint[0] + cos(x[2]) * NewPoint[1] + x[0] - ReferencePoint[1];
+
+	return error;
+}
 
 
-void ICP::BuildErrorFunction(VectorXf NewPoint, VectorXf ReferencePoint) {
+
+void ICP::BuildErrorFunction(VectorXf ReferencePoint, VectorXf NewPoint) {
 	
 	// Initialize each element in X as an Auto-Diff Object (Equivalent to a variable x)
 	for (size_t i = 0; i < ErrorParameterNum; i++) {
@@ -66,7 +86,7 @@ void ICP::BuildErrorFunction(VectorXf NewPoint, VectorXf ReferencePoint) {
 
 	
 
-MatrixXf ICP::CalculateJacobian(VectorXf NewPoint, VectorXf ReferencePoint) {
+MatrixXf ICP::CalculateJacobian(VectorXf ReferencePoint, VectorXf NewPoint) {
 	
 	// STEP 1: Set Up Update Function----------------------------------------------	
 	BuildErrorFunction(NewPoint, ReferencePoint);	
@@ -168,36 +188,38 @@ void ICP::RunSVDAlign(PointCloud RefPointSet, PointCloud NewPointSet) {
 
 
 void ICP::RunSVD(PointCloud NewPointCloud) {
-
+	
 }
 
 
 
-void ICP::RunLeastSquares(PointCloud RefPointCloud, PointCloud NewPointCloud) {
+void ICP::RunLeastSquares(VectorXf x, PointCloud RefPointCloud, PointCloud NewPointCloud) {
 	
 	pair<PointCloud, PointCloud>  point_sets = Calculate_Correspondences(RefPointCloud, NewPointCloud);
 	MatrixXf H_sum;
 	VectorXf b_sum;
+	VectorXf x_update = x;
 	int i = 0;
 	
-	while () { // While not converged
+	// While Not Converged
+	while (x_update[0] > min_convergence_thresh) { 
 			
 		// Compute sum of H and b over all N points.
 		for (int n = 0; n < point_sets.first.Points.size() ; n++) {
 			
 			MatrixXf Jac = CalculateJacobian(point_sets.first.Points[n], point_sets.second.Points[n]);
 			MatrixXf H = Jac.transpose() * Jac;
-			VectorXf b = Jac.transpose() * lksadjfasdf;
+			VectorXf b = Jac.transpose() * GetErrorVector(x_update, point_sets.first.Points[n], point_sets.second.Points[n]);
 
 			H_sum += H;
 			b_sum += b;
 		}
 
 		// Solve Linear System
-		VectorXf x_uptate = H_sum.colPivHouseholderQr().solve(b_sum);	
+		x_update = H_sum.colPivHouseholderQr().solve(b_sum);	
 
 		// Update Parameters
-		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		point_sets.second = Update_PointCloud(point_sets.second, x_update);
 
 
 	}

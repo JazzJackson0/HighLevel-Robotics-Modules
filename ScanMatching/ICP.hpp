@@ -14,6 +14,7 @@ using std::pair;
 using Eigen::VectorXf;
 using Eigen::MatrixXf;
 typedef struct point_cloud PointCloud;
+typedef struct rotation_translation RotationTranslation;
 using namespace::CppAD;
 using namespace::Eigen;
 
@@ -23,10 +24,21 @@ class ICP {
 		int ErrorParameterNum = 3;
 		std::vector<AD<float>> X; // X = (t_x, t_y, angle)
 		std::vector<AD<float>> Y;
-		ADFun<float> ErrorFunction;		
+		ADFun<float> ErrorFunction;
+		float min_convergence_thresh;		
 
 	private:
 
+		/**
+		 * @brief Updates a given Point Cloud with the incremental result from the solution
+		 * 			to a Linear System.
+		 * 
+		 * @param PointCloud The Point Cloud to update
+		 * @param x_increment The increment to add to the Point Cloud.
+		 * @return ** PointCloud  Updated Point Cloud
+		 */
+		PointCloud Update_PointCloud(PointCloud PointCloud, VectorXf x_increment);
+		
 		/**
 		 * @brief Calculates the correspondences between two point clouds and returns subsets
 		 * 			of each cloud that map to each other (n-to-n).
@@ -39,29 +51,37 @@ class ICP {
 		pair<PointCloud, PointCloud>  Calculate_Correspondences(PointCloud RefPointCloud, 
 			PointCloud NewPointCloud);
 
-
+		/**
+		 * @brief Get the Error between the new and reference point
+		 * 
+		 * @param x Error function parameters (x, y, theta)
+		 * @param ReferencePoint Point n from Reference Point Set
+		 * @param NewPoint Point n from New Point Set
+		 * @return ** VectorXf 
+		 */
+		VectorXf GetErrorVector(VectorXf x, VectorXf ReferencePoint, VectorXf NewPoint);
 
 		/**
 		 * @brief Builds the error function for the Non-Linear Least Squares ICP method.
 		 *
-		 * @param NewPoint 
-		 * @param ReferencePoint 
+		 * @param ReferencePoint Point n from Reference Point Set
+		 * @param NewPoint Point n from New Point Set
 		 *
 		 * @return ** void
 		 */
-		void BuildErrorFunction(VectorXf NewPoint, VectorXf ReferencePoint); 
+		void BuildErrorFunction(VectorXf ReferencePoint, VectorXf NewPoint); 
 		 
 
 
 		/**
          * @brief Creates and solves the Jacobian for a given function.
 		 *
-         * @param NewPoint 
-		 * @param ReferencePoint 
+		 * @param ReferencePoint Point n from Reference Point Set
+		 * @param NewPoint Point n from New Point Set
 		 * 
          * @return ** MatrixXf - Jacobian 
          */
-		MatrixXf CalculateJacobian(VectorXf NewPoint, VectorXf ReferencePoint); 
+		MatrixXf CalculateJacobian(VectorXf ReferencePoint, VectorXf NewPoint); 
 
 
 	public:
@@ -102,18 +122,18 @@ class ICP {
 		/**
 		 * @brief Run Point Cloud Registration using a Non-Linear Least Squares apprroach.
 		 *
+		 * @param x Error function parameters (x, y, theta)
 		 * @param RefPointCloud Reference Point Cloud
 		 * @param NewPointCloud New Point Cloud
 		 * 
 		 * @return ** void
 		 */
-		void RunLeastSquares(PointCloud RefPointCloud, PointCloud NewPointCloud);
+		void RunLeastSquares(VectorXf x, PointCloud RefPointCloud, PointCloud NewPointCloud);
 
 };
 
 
 struct point_cloud {
-
 	std::vector<VectorXf> Points;
 	std::vector<float> Weights;
 };
