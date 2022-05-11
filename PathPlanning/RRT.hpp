@@ -28,7 +28,7 @@ class RRT {
 		 *
          * @return ** pair<int, float> - (Index of the Nearest Vertex, Distance to Random Position)
          */
-        pair<int, float> Get_NearestVertexIndex(Node randPos);
+        std::pair<int, float> Get_NearestVertexIndex(Node randPos);
 
         /**
          * @brief Produce a random (x, y) coordinate pair within the bounds of the grid.
@@ -48,7 +48,7 @@ class RRT {
          * @return true - If new Vertex was set.
          * @return false - If new Vertex was not set.
          */
-        bool Set_NewVertex(pair<int, float> nearestVIndex, Node randPos, 
+        bool Set_NewVertex(std::pair<int, float> nearestVIndex, Node randPos, 
             int maxConnectDist);
 		
 		/**
@@ -59,7 +59,7 @@ class RRT {
 		 *
 		 * @return ** vector<int> - List of neighboring vector indices
 		 */
-		vector<int> Get_Neighbors(float search_radius, Node randPos); 
+		std::vector<int> Get_Neighbors(float search_radius, Node randPos); 
 
 		/**
 		 * @brief Searches through the list of vertices for the vertex with the best cost
@@ -71,7 +71,7 @@ class RRT {
 		 * @return ** pair<int, float> - (Index of neighbor with best Cost, Distance between that node 
          *                                  and the random position)
 		 */
-    	pair<int, float> Get_BestNeighbor(vector<int> neighbors, Node randPos);
+    	std::pair<int, float> Get_BestNeighbor(std::vector<int> neighbors, Node randPos);
 
 		/**
 		 * @brief Reconnects a given node to whichever one produces the shortest path 
@@ -83,7 +83,7 @@ class RRT {
 		 *
 		 * @return ** void 
 		 */
-		void Rewire_Neighbors(vector<int> neighbors, int nodeIndex, Node randPos);
+		void Rewire_Neighbors(std::vector<int> neighbors, int nodeIndex, Node randPos);
 
 		/**
 		 * @brief Calculate the Euclidean Distancee between two Nodes

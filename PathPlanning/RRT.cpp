@@ -1,10 +1,10 @@
 #include "RRT.hpp"
 
-pair<int, float> RRT::Get_NearestVertexIndex(Node randPos) {
+std::pair<int, float> RRT::Get_NearestVertexIndex(Node randPos) {
     
     float min_dist = std::numeric_limits<float>::max();
     int nearestVertexIndex = -1;
-    int n_Vertices = RapidTree.Get_Vertices().first; // Number of Vertices in Vertex Set
+    int n_Vertices = RapidTree.Get_Vertices().size(); // Number of Vertices in Vertex Set
 
     // Calculate distance between randPos and every vertex in set.
     for (int i = 0; i < n_Vertices; i++) {
@@ -35,7 +35,7 @@ Node RRT::Get_RandomPosition() {
 
 
 
-bool RRT::Set_NewVertex(pair<int, float> nearestVIndex, Node randPos, 
+bool RRT::Set_NewVertex(std::pair<int, float> nearestVIndex, Node randPos, 
     int maxConnectDist) {
 
 	Node nearest = RapidTree.Get_Vertex(nearestVIndex.first);
@@ -67,11 +67,11 @@ bool RRT::Set_NewVertex(pair<int, float> nearestVIndex, Node randPos,
 
 
 
-vector<int> RRT::Get_Neighbors(float search_radius, Node randPos) {
+std::vector<int> RRT::Get_Neighbors(float search_radius, Node randPos) {
 
-	vector<int> NeighboringVectors;
+	std::vector<int> NeighboringVectors;
 
-    int n_Vertices = RapidTree.Get_Vertices().first; // Number of Vertices in Vertex Set
+    int n_Vertices = RapidTree.Get_Vertices().size(); // Number of Vertices in Vertex Set
 
     // Calculate distance between randPos and every vertex in set.
     for (int i = 0; i < n_Vertices; i++) {
@@ -87,7 +87,7 @@ vector<int> RRT::Get_Neighbors(float search_radius, Node randPos) {
 
 
 
-pair<int, float> RRT::Get_BestNeighbor(vector<int> neighbors, Node randPos) {
+std::pair<int, float> RRT::Get_BestNeighbor(std::vector<int> neighbors, Node randPos) {
 
 	float min_cost = std::numeric_limits<float>::max();
 	int best_index = -1;
@@ -102,13 +102,13 @@ pair<int, float> RRT::Get_BestNeighbor(vector<int> neighbors, Node randPos) {
 	}
 
 	float dist = Get_Distance(randPos, RapidTree.Get_Vertex(best_index));
-	pair<int, float> best_neighbor = make_pair(best_index, dist);
+	std::pair<int, float> best_neighbor = make_pair(best_index, dist);
 	return best_neighbor;
 }
 
 
 
-void RRT::Rewire_Neighbors(vector<int> neighbors, int nodeIndex, Node randPos) {
+void RRT::Rewire_Neighbors(std::vector<int> neighbors, int nodeIndex, Node randPos) {
 
 	for (int i = 0; i < neighbors.size(); i++) {
 
@@ -173,9 +173,9 @@ void RRT::Run_RRTStar(Node start, Node goal, float maxConnectionDistance, float 
         RapidTree.Get_Vertex(k).y == goal.y) {
 
         Node randP = Get_RandomPosition();
-		vector<int> neighbors = Get_Neighbors(SearchRadius, randP);
-		pair<int, float> nearest_index = Get_NearestVertexIndex(randP);
-		pair<int, float> best_index_in_radius = Get_BestNeighbor(neighbors, randP);
+		std::vector<int> neighbors = Get_Neighbors(SearchRadius, randP);
+		std::pair<int, float> nearest_index = Get_NearestVertexIndex(randP);
+		std::pair<int, float> best_index_in_radius = Get_BestNeighbor(neighbors, randP);
 		
 		if (best_index_in_radius.second <= nearest_index.second) {
 			Set_NewVertex(best_index_in_radius, randP, maxConnectionDistance);
@@ -184,7 +184,7 @@ void RRT::Run_RRTStar(Node start, Node goal, float maxConnectionDistance, float 
 		else { Set_NewVertex(nearest_index, randP, maxConnectionDistance); }
 
 		// Re-wire other neighbors in search radius
-		int randP_index = RapidTree.Get_Vertices().second.back().Get_VertexID();
+		int randP_index = RapidTree.Get_Vertices().back().Vertex_ID;
 		Rewire_Neighbors(neighbors, randP_index, randP);
 
     }
