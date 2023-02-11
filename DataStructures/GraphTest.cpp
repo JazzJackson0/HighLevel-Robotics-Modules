@@ -5,12 +5,14 @@
 class VertexTest : public ::testing::Test {
 
   protected:
+
+  // Variables
     
-    VertexTest() {
+    virtual void SetUp() override {
       // Test Set-Up
     }
 
-    ~VertexTest() {
+    virtual void TearDown() override {
       // Test Tear Down
     }
 };
@@ -20,7 +22,7 @@ class VertexTest : public ::testing::Test {
  *
  * **/
 TEST(VertexTest, AddDataTest) {
-  
+  EXPECT_EQ(1, 1);
 }
 
 /**
