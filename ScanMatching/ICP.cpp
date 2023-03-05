@@ -1,6 +1,6 @@
 #include "ICP.hpp"
 
-PointCloud Update_PointCloud(PointCloud pointCloud, VectorXf x_increment) {
+PointCloud ICP::Update_PointCloud(PointCloud pointCloud, VectorXf x_increment) {
 
 	for (int i = 0; i < pointCloud.Points.size(); i++) {
 		pointCloud.Points[i][0] = x_increment[i];
@@ -50,7 +50,7 @@ pair<PointCloud, PointCloud>  ICP::Calculate_Correspondences(PointCloud RefPoint
 	return Correspondences;
 }
 
-VectorXf GetErrorVector(VectorXf x, VectorXf ReferencePoint, VectorXf NewPoint) {
+VectorXf ICP::GetErrorVector(VectorXf x, VectorXf ReferencePoint, VectorXf NewPoint) {
 
 	VectorXf error(2);
 	error[0] = cos(x[2]) * NewPoint[0] - sin(x[2]) * NewPoint[1] + x[0] - ReferencePoint[0];

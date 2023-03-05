@@ -118,7 +118,7 @@ void EKFSlam::Correction(VectorXf current_scan, OdometryReadng odom) {
 	// For all OBSERVED Features (So it wont be NumOfLandmarks)
 	for (int i = 0; i < NumOfLandmarks; i++) {
 
-		if (/*Given Landmark == 0*/) {
+		if (1/*Given Landmark == 0*/) { // FINISH!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
 
 			VectorXf new_landmark_j;
 			new_landmark_j[0] = current_pose[0] + (current_scan[0] * cos(current_scan[1] * current_pose[2]));
@@ -280,7 +280,7 @@ EKFSlam::EKFSlam(Eigen::VectorXf initial_position, std::vector<VectorXf> map,
 			ObservationMappingFunction(i, i) = 1.0;
 		}
 
-		Identity = MatrixXf::Identity(); // Set Dimensions
+		Identity = MatrixXf::Identity(1, 2); // Set Dimensions THESE DIMENSIONS ARE TEMPORARY!!!!!!!!!!!!!!!!!!!!!!!
 }
 
 
@@ -296,7 +296,7 @@ void EKFSlam::Run() {
 /*
  * 			TO-DO
  * 			-----
- *  - Finish
+ *  - Finish (Correction Function)
  *
  *  - Test Code
  *  

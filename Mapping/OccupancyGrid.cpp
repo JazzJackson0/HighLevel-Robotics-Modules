@@ -26,6 +26,8 @@ float OccupancyGridMap::InverseSensorModel(pair<int, int> cell, VectorXf pose,
 		return LogOdds(0.3);
 	}
 
+	return LogOdds(0.0);
+
 }
 
 
@@ -79,7 +81,7 @@ void OccupancyGridMap::UpdateGridMap(VectorXf pose, vector<VectorXf> scan) {
 		for (int j = 0; j < N; j++) {
 
 			pair<int, int> cell = std::make_pair(i, j);
-			GridMap[i][j] = InverseSensorModel(cell, pose, scan); // Is this how you access elements in a Matrix?
+			GridMap(i, j) = InverseSensorModel(cell, pose, scan);
 
 			GridMap = GridMap + PreviousGridMap - InitialGridMap;
 			PreviousGridMap = GridMap;

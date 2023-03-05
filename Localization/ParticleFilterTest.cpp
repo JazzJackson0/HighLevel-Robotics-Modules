@@ -30,7 +30,7 @@ TEST(ParticleFilterTest, Constructor) {
 }
 
 /**
- * brief
+ * @brief
  *
  * **/
 TEST(ParticleFilterTest, RunMonteCarlo1) {

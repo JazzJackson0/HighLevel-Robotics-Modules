@@ -12,6 +12,13 @@ using namespace::CppAD;
 using namespace::Eigen;
 using std::vector;
 
+struct odometry_reading {
+	float RobotTranslation; 
+	float RobotRotation;
+};
+
+enum f_type {UPDATE, OBSERVATION};
+
 typedef struct state_vec StateVec;
 typedef struct pose_plus PosePlus;
 typedef struct odometry_reading OdometryReadng;
@@ -180,10 +187,4 @@ class EKFSlam {
         void Run();
 };
 
-struct odometry_reading {
-	float RobotTranslation; 
-	float RobotRotation;
-};
 
-
-enum f_type {UPDATE, OBSERVATION};

@@ -67,6 +67,7 @@ void PoseGraphOptSLAM::BuildErrorFunction() {
 
 std::vector<VectorXf> PoseGraphOptSLAM::ICP(void) {
 	
+	return NULL;
 
 } 
 
@@ -137,7 +138,7 @@ pair<Eigen::SparseMatrix<float, Eigen::RowMajor>, VectorXf> PoseGraphOptSLAM::Bu
 	// Create vector of variables Jacobian will be calculated with respect to ( J(x) ).
 	// Holds the value of the corresponding Independent Variable's index.
 	// (e.g., 0 = X[0], 1 = X[1], etc.)
-	std::vector<float> WithRespectTo(PoseDimensions);
+	ValueVector WithRespectTo(PoseDimensions);
 	for (size_t i = 0; i < PoseDimensions; i++) {
 		WithRespectTo[i] = (float) i;
 	}
@@ -172,7 +173,7 @@ pair<Eigen::SparseMatrix<float, Eigen::RowMajor>, VectorXf> PoseGraphOptSLAM::Bu
 		SparseMatrix, JacobianSparsityPattern, ColoringAlgo, Work);
 	
 	// Convert to Eigen format
-	Eigen::SparseMatrix<float, Eigen::RowMajor> Jac;
+	Eigen::SparseMatrix<double, Eigen::RowMajor> Jac;
 	CppAD::sparse2eigen(SparseMatrix, Jac);
 
 	// STEP 3: Linearize the Error Function -----------------

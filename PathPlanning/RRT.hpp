@@ -4,9 +4,15 @@
 #include <limits>
 #include <utility>
 #include <vector>
-#include <../DataStructures/Graph.hpp>
+#include "../DataStructures/Graph.hpp"
 using std::make_pair;
 
+struct node {	
+	int x;
+	int y;
+	int DistanceFromStart;
+	int ParentIndex;
+};
 typedef struct node Node;
 
 class RRT {
@@ -134,11 +140,6 @@ class RRT {
 };
 
 
-struct node {	
-	int x;
-	int y;
-	int DistanceFromStart;
-	int ParentIndex;
-};
+
 
 

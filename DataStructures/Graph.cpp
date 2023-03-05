@@ -43,7 +43,7 @@ T Graph<T, Z>::Get_Vertex(int vertex_ID) {
 template <typename T, typename Z>
 void Graph<T, Z>::Add_Vertex(T data) {
 
-    Vertex new_vertex;
+    Vertex<T, Z> new_vertex;
     new_vertex.Data = data;
     new_vertex.Vertex_ID = G.size();
     G.push_back(new_vertex);
@@ -54,14 +54,14 @@ template <typename T, typename Z>
 void Graph<T, Z>::Make_Connection(int vertex1_ID, int vertex2_ID, Z weight) {
 
     // Edge from V1 to V2
-    Edge new_edge;
+    Edge<Z> new_edge;
     new_edge.AdjacentVertex_ID = vertex2_ID;
     new_edge.Weight = weight;
     G[vertex1_ID].push_back(vertex2_ID);
 
     // Edge from V2 to V1 (If Undirected)
     if (!Directed) {
-        Edge new_edge;
+        Edge<Z> new_edge;
         new_edge.AdjacentVertex_ID = vertex1_ID;
         new_edge.Weight = weight;
         G[vertex2_ID].push_back(vertex1_ID);
@@ -114,8 +114,8 @@ void Graph<T, Z>::Print_Edges() {
 template <typename T, typename Z>
 void Graph<T, Z>::Disconnect_Vertices(int index1, int index2) {
 
-    std::list<Vector<T, Z>>::iterator iter1;
-    std::list<Vector<T, Z>>::iterator iter2;
+    typename std::list<Vertex<T, Z>>::iterator iter1;
+    typename std::list<Vertex<T, Z>>::iterator iter2;
     iter1 = G[index1].begin();
     iter2 = G[index2].begin();
 

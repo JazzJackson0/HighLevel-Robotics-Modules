@@ -14,7 +14,7 @@ struct Edge {
 
 template <typename T, typename Z>
 struct Vertex {
-    Vertex(int id, std::list<Edge<Z>> &adj) : Vertex_ID(id), Adjacents(adj) {}
+    Vertex(int id, std::list<Edge<Z>> &adj) : Vertex_ID(id), Adjacents(adj) {} // Struct Constructor
     int Vertex_ID;
     T Data;
     std::list<Edge<Z>> Adjacents;
@@ -45,7 +45,7 @@ class Graph {
          * @param state Sets Graph to be Directed (TRUE) or Undirected (FALSE) 
          * 
          */
-        Graph(std::vector<Vertex<T, Z>> &adjacency_list, bool state) : G(adjacency_list);
+        Graph(std::vector<Vertex<T, Z>> &adjacency_list, bool state);
 
 
         /**

@@ -6,6 +6,17 @@ project(DataStructures)
 set(TARGET_A graphTest)
 set(SOURCES_A GraphTest.cpp Graph.cpp)
 
+
+#Set-up Google Test
+set(CMAKE_CXX_STANDARD 14)
+
+include(FetchContent)
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+)
+FetchContent_MakeAvailable(googletest)
+
 # Create Executables & Link Dependencies
 add_executable(${TARGET_A} ${SOURCES_A})
 target_link_libraries(${TARGET_A} PUBLIC gtest_main) # Link Libraries to Executable

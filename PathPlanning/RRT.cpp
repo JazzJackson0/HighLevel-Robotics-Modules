@@ -63,6 +63,7 @@ bool RRT::Set_NewVertex(std::pair<int, float> nearestVIndex, Node randPos,
 	qNew.DistanceFromStart = Get_Distance(qNew, nearest) + prev_dist_from_start;
 	qNew.ParentIndex = nearestVIndex.first;
 	RapidTree.Connect_NewVertex(nearestVIndex.first, qNew, 0);
+	return true;
 }
 
 

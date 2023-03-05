@@ -157,7 +157,7 @@ TEST(GraphTest, DFSTest) {
  * @brief 
  *
  * **/
-TEST(GraphTest, DFSTest) {
+TEST(GraphTest, BFSTest) {
   
 }
 

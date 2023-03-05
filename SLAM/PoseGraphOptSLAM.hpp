@@ -19,9 +19,10 @@
 
 #include "../DataStructures/Graph.hpp"
 
-
-//using CppAD::sparse_rc;
-//using CppAD::sparse_rcv;
+using CppAD::AD;
+using CppAD::NearEqual;
+using CppAD::sparse_rc;
+using CppAD::sparse_rcv;
 using namespace::CppAD;
 using namespace::Eigen;
 using std::vector;

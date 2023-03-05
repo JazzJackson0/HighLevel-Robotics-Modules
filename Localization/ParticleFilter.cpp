@@ -3,10 +3,10 @@
 vector<Particle> ParticleFilter::RunParticleFilter(vector<Particle> particle_set, 
 	vector<vector<float>> scan, OdometryReadng odom) {
 	
-	
-	
 	vector<Particle> ParticleSetUpdate;
 	float weightSum = 0.0;
+	unsigned seed;
+	std::default_random_engine random_engine(seed);
 
 	for (int m = 0; m < MaxParticles; m++) {
 		
@@ -28,16 +28,16 @@ vector<Particle> ParticleFilter::RunParticleFilter(vector<Particle> particle_set
 		std::normal_distribution<float> y_distribution(UpdatedPose[1], pose_std_dev);
 		std::normal_distribution<float> th_distribution(UpdatedPose[2], pose_std_dev);
 		
-		unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-  		std::default_random_engine random_engine (seed);
+		seed = std::chrono::system_clock::now().time_since_epoch().count();
+  		std::default_random_engine random_engine(seed);
 		float new_x = x_distribution(random_engine);
 
-		unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-  		std::default_random_engine random_engine (seed);
+		seed = std::chrono::system_clock::now().time_since_epoch().count();
+  		random_engine.seed(seed);
 		float new_y = y_distribution(random_engine);
 
-		unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-  		std::default_random_engine random_engine (seed);
+		seed = std::chrono::system_clock::now().time_since_epoch().count();
+  		random_engine.seed(seed);
 		float new_angle = th_distribution(random_engine);
 
 		// Filter out Landmarks not withing sensor range
@@ -46,21 +46,23 @@ vector<Particle> ParticleFilter::RunParticleFilter(vector<Particle> particle_set
 
 		// Generate new Weight
 		float particle_weight = 0.0;
-		for (int p = 0; p < ; p++) { // Iterate through beams????????????
+		for (int p = 0; p < 100; p++) { // FINISH: Iterate through beams that Particle would see!!!!!!!!!!!!!!!!!!!!!!!!!
 			
 			float beam_weight = 0.0;
 
 			for (int r = 0; r < scan.size(); r++) { // Iterate through Robot Beams in Scan
+				//int sensor_x = (int) (scan[r][0] * cos(scan[r][1]));
+				//int sensor_y = (int) (scan[r][0] * sin(scan[r][1]));
+				
+				// Convert Local Coordinates to Global Coordinates for scanned beam.
+				int sensor_x = (int) scan[r][0];
+				int sensor_y = (int) scan[r][1];
 
-				// Convert Local Coordinates to Global Coordinates for scanned beam. DON'T THINK THIS IS NEEDED
-				int sensor_x = (int) (scan[r][0] * cos(scan[r][1]));
-				int sensor_y = (int) (scan[r][0] * sin(scan[r][1]));
-
-				int x_global = ParticleSetUpdate[m].Pose[0] + 
+				int sensor_x_global = ParticleSetUpdate[m].Pose[0] + 
 					(cos(ParticleSetUpdate[m].Pose[2]) * sensor_x) - 
 						(sin(ParticleSetUpdate[m].Pose[2]) * sensor_y);
 
-				int y_global = ParticleSetUpdate[m].Pose[1] + 
+				int sensor_y_global = ParticleSetUpdate[m].Pose[1] + 
 					(sin(ParticleSetUpdate[m].Pose[2]) * sensor_x) - 
 						(cos(ParticleSetUpdate[m].Pose[2]) * sensor_y);
 
@@ -68,18 +70,18 @@ vector<Particle> ParticleFilter::RunParticleFilter(vector<Particle> particle_set
 				float beam_bearing = scan[r][1];
 				
 				float range_weight = ProbabilityDensityFunction(beam_range, 
-					particle_estimation, weight_std_dev);
+					1/*particle_estimation!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1*/, weight_std_dev);
 				// Normalize to 1
 				range_weight /= distribution_peak;
 				range_weight *= range_coef;
 
 				// Calculate min angle
-				float min_angle = abs(beam_bearing - something); // The second should be particle angle
+				float min_angle = abs(beam_bearing - 1/*something!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/); // The second should be particle angle
 				if (min_angle > M_PI) { min_angle = abs(min_angle - (2 * M_PI)); }
 
 
 				float bearing_weight = ProbabilityDensityFunction(min_angle, 
-					particle_estimation, weight_std_dev);
+					1/*particle_estimation!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1*/, weight_std_dev);
 				// Normalize to 1
 				bearing_weight /= distribution_peak;
 				bearing_weight *= bearing_coef;
@@ -151,6 +153,7 @@ ParticleFilter::ParticleFilter(int max_particles, int pose_dimensions, float tim
 	MaxParticles = max_particles;
 	PoseDimensions = pose_dimensions;
 	TimeInterval = time_interval;
+	unsigned seed;
 
 	// Uniformly Distribute Particles
 	std::uniform_real_distribution<float> u_distro_x(0.0, MapWidth + 1);
@@ -160,16 +163,16 @@ ParticleFilter::ParticleFilter(int max_particles, int pose_dimensions, float tim
 
 		Particle particle;
 
-		unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-  		std::default_random_engine random_engine (seed);
+		seed = std::chrono::system_clock::now().time_since_epoch().count();
+  		std::default_random_engine random_engine(seed);
 		particle.Pose.push_back(u_distro_x(random_engine)); // x
 
-		unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-  		std::default_random_engine random_engine (seed);
+		seed = std::chrono::system_clock::now().time_since_epoch().count();
+  		random_engine.seed(seed);
 		particle.Pose.push_back(u_distro_y(random_engine)); // y
 
-		unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-  		std::default_random_engine random_engine (seed);
+		seed = std::chrono::system_clock::now().time_since_epoch().count();
+  		random_engine.seed(seed);
 		particle.Pose.push_back(u_distro_th(random_engine)); // theta
 		particle.weight = 1;
 		ParticleSet.push_back(particle);
@@ -180,8 +183,8 @@ ParticleFilter::ParticleFilter(int max_particles, int pose_dimensions, float tim
 
 void ParticleFilter::RunMonteCarlo() {
 	
-	RunParticleFilter();
-	Resample();
+	//RunParticleFilter();
+	//Resample();
 }
 
 

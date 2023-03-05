@@ -6,9 +6,19 @@ project(Mapping)
 set(TARGET_A occupancyGridTest)
 set(SOURCES_A OccupancyGridTest.cpp OccupancyGrid.cpp)
 
+#Set-up Google Test
+set(CMAKE_CXX_STANDARD 14)
+
+include(FetchContent)
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+)
+FetchContent_MakeAvailable(googletest)
+
 # Create Executables & Link Dependencies
 add_executable(${TARGET_A} ${SOURCES_A})
-target_link_libraries(${TARGET_A} PUBLIC gtest_main) # Link Libraries to Executable
+target_link_libraries(${TARGET_A} PUBLIC gtest_main) # Link GoogleTest's main() to Executable
 
 # Tell CMake the Target is a Unit Test
 add_test(NAME ${TARGET_A} COMMAND ${TARGET_A})
