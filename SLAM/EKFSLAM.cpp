@@ -245,13 +245,13 @@ VectorXf EKFSlam::GetPoseFromStateVector() {
 
 
 EKFSlam::EKFSlam(Eigen::VectorXf initial_position, std::vector<VectorXf> map, 
-		int pose_dim, int landmark_dim, int landmark_num, 
+		int pose_dim, int landmark_dim, int max_landmark_num, 
 		Eigen::MatrixXf obs_covariance, Eigen::MatrixXf motion_covariance) {
 
 		// Set Dimensions
 		PoseDimensions = pose_dim;
 		LandmarkDimensions = landmark_dim;
-		NumOfLandmarks = landmark_num;
+		NumOfLandmarks = max_landmark_num;
 		// Set Initial Position
 		InitialPosition = initial_position;
 

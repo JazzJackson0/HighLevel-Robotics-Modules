@@ -36,7 +36,7 @@ T Graph<T, Z>::Get_Vertex(int vertex_ID) {
         return;
     }
     
-    return G[vertex_ID].data;
+    return G[vertex_ID].Data;
 }
 
 
@@ -57,20 +57,26 @@ void Graph<T, Z>::Make_Connection(int vertex1_ID, int vertex2_ID, Z weight) {
     Edge<Z> new_edge;
     new_edge.AdjacentVertex_ID = vertex2_ID;
     new_edge.Weight = weight;
-    G[vertex1_ID].push_back(vertex2_ID);
+    G[vertex1_ID].Adjacents.push_back(new_edge);
 
     // Edge from V2 to V1 (If Undirected)
     if (!Directed) {
-        Edge<Z> new_edge;
-        new_edge.AdjacentVertex_ID = vertex1_ID;
-        new_edge.Weight = weight;
-        G[vertex2_ID].push_back(vertex1_ID);
+        Edge<Z> new_edge2;
+        new_edge2.AdjacentVertex_ID = vertex1_ID;
+        new_edge2.Weight = weight;
+        G[vertex2_ID].Adjacents.push_back(new_edge2);
     }
+}
+
+template <typename T, typename Z>
+std::list<Edge<Z>> Graph<T, Z>::Get_AdjacentVertices(int vertex_ID) {
+
+    return G[vertex_ID].Adjacents;
 }
 
 
 template <typename T, typename Z>
-void Graph<T, Z>::Connect_NewVertex(int vertexConnect_ID, T new_vertex_data, Z weight) {
+void Graph<T, Z>::Connect_NewVertex(T new_vertex_data, int vertexConnect_ID, Z weight) {
 
     Add_Vertex(new_vertex_data);
     Make_Connection(G.size() - 1, vertexConnect_ID, weight);
@@ -146,18 +152,24 @@ void Graph<T, Z>::Disconnect_Vertices(int index1, int index2) {
 
 
 template <typename T, typename Z>
-void Graph<T, Z>::DFS(Vertex<T, Z> starting_vertex, Vertex<T, Z> target_vertex, 
-    std::vector<Vertex<T, Z>> Visited) {
+Vertex<T, Z> Graph<T, Z>::DFS(T target_data) {
 
     // Implement Code
+    //Vertex<T, Z> starting_vertex
+    //Vertex<T, Z> target_data, 
+    //std::vector<Vertex<T, Z>> Visited
+    
+    return NULL;
 }
 
 
 
 template <typename T, typename Z>
-void Graph<T, Z>::BFS(Vertex<T, Z> starting_vertex, Vertex<T, Z> target_vertex) {
+Vertex<T, Z> Graph<T, Z>::BFS(T target_data) {
 
     // Implement Code
+
+    return NULL;
 }
 
 

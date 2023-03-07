@@ -169,7 +169,7 @@ A_Star::A_Star(int **grid, int width, int height) {
 
 
 
-void A_Star::Search(CellCoordinate startCell, CellCoordinate goalCell) {
+bool A_Star::Search(CellCoordinate startCell, CellCoordinate goalCell) {
 
     /*-----------------------Make Initial Checks-----------------------*/
     if (!isValid(startCell.first, startCell.second)) {
@@ -295,9 +295,12 @@ void A_Star::Search(CellCoordinate startCell, CellCoordinate goalCell) {
     } // End Main-Loop
 
 
-    if (!goalReached) { cout << "Failed to Reach Goal." << endl; }
+    if (!goalReached) { 
+        cout << "Failed to Reach Goal." << endl; 
+        return false;
+    }
 
-    return;
+    return true;
 }
 
 

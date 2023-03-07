@@ -11,6 +11,7 @@ typedef struct pose Pose;
 typedef struct dist_sensor_data DistSensorData;
 typedef enum { FORWARD, LEFT, RIGHT, STOP } Directions;
 typedef enum { BUG0, BUG1, BUG2, TAN } BugType;
+typedef pair<int, int> CellCoordinate;
 
 
 class Bug {
@@ -22,22 +23,22 @@ class Bug {
         float forward_speed; // 1% - 100%
         float turn_speed; // 1% - 100%
 
-		pair<int, int> startPoint;
+		CellCoordinate startPoint;
 		float startOrientation;
-        pair<int, int> goalPoint;
+        CellCoordinate goalPoint;
 
 		float currentOrientation;
 		float currentAngleToGoal;
-		pair<int, int> currentPos;
+		CellCoordinate currentPos;
 
 		float min_dist; // Used to help calculate the leave_point
-		pair<int, int> entry_point; // Point where robot begins orbiting obstacle
-		pair<int, int> leave_point; // Closest point to goal on the orbit of given obstacle
+		CellCoordinate entry_point; // Point where robot begins orbiting obstacle
+		CellCoordinate leave_point; // Closest point to goal on the orbit of given obstacle
 		float angle_to_goal; // Current angle to goal based on robot's position
 		float m_line_angle;
-		pair<int, int> right_scanPoint;
-		pair<int, int> left_scanPoint;
-		pair<int, int> firstMinScanPoint; // Point, from first new obstacle scan, closest to goal.
+		CellCoordinate right_scanPoint;
+		CellCoordinate left_scanPoint;
+		CellCoordinate firstMinScanPoint; // Point, from first new obstacle scan, closest to goal.
 
 		bool entering_wallfollow_mode = false;
 		bool leave_at_leavepoint = false; // Enables robot to leave obstacle orbit when it reaches predefined closest_point.
@@ -86,7 +87,7 @@ class Bug {
          * @param currentPos Current position
          * @return ** float - Distance to Goal 
          */
-        float Get_GoalDistance(pair<int, int> currentPos);
+        float Get_GoalDistance(CellCoordinate currentPos);
 
 
 
@@ -199,7 +200,7 @@ class Bug {
 		 * @param t_speed The desired turn speed
 		 *
 		 */
-        Bug(Pose start_pose, pair<int, int> goal, float f_speed, float t_speed);
+        Bug(Pose start_pose, CellCoordinate goal, float f_speed, float t_speed);
 
 
         /**
@@ -238,7 +239,7 @@ class Bug {
 
 
 struct pose {
-	pair<int, int> position;
+	CellCoordinate position;
 	float orientation;
 };
 

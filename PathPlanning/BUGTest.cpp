@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include "BUG.hpp"
 
 
 class BUGTest : public ::testing::Test {
@@ -6,49 +7,48 @@ class BUGTest : public ::testing::Test {
 	protected:
 
 		BUGTest() {
+			CellCoordinate pose_pos = std::make_pair(0, 0);
+			Pose pose;
+			pose.position = pose_pos;
+			pose.orientation = 30.0;
+			CellCoordinate goal = std::make_pair(50, 83);
+			int forward_speed = 30;
+			int turn_speed = 10;
 
+			bug = new Bug(pose, goal, forward_speed, turn_speed);
 		}
 			
-		~BUGTest() {
+		//~BUGTest() {}
 
-		}
+		Bug *bug;
 };
 
+
 /**
- * @brief 
+ * @brief
  *
  * **/
-TEST(BUGTest, Constructor) {
+TEST_F(BUGTest, Bug0) {
 
-	int val1, val2;
-	bool condition;
-	EXPECT_EQ(val1, val2);
-	EXPECT_TRUE(condition);
-	ASSERT_TRUE(condition);
+	bug->Bug0();
 }
 
 /**
  * @brief
  *
  * **/
-TEST(BUGTest, Bug0) {
+TEST_F(BUGTest, Bug1) {
 
+	bug->Bug1();
 }
 
 /**
  * @brief
  *
  * **/
-TEST(BUGTest, Bug1) {
+TEST_F(BUGTest, Bug2) {
 
-}
-
-/**
- * @brief
- *
- * **/
-TEST(BUGTest, Bug2) {
-
+	bug->Bug2();
 }
 
 
@@ -56,8 +56,9 @@ TEST(BUGTest, Bug2) {
  * @brief
  *
  * **/
-TEST(BUGTest, TangentBug) {
+TEST_F(BUGTest, TangentBug) {
 
+	bug->TangentBug();
 }
 
 

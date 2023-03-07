@@ -17,6 +17,8 @@ typedef struct cell {
     double FCost, GCost, HCost;
 }Cell; 
 
+typedef pair<int, int> CellCoordinate;
+
 class A_Star {
 
     private: 
@@ -25,7 +27,6 @@ class A_Star {
         int G_COL; // Grid Height
         int **Grid; // Grid to Search
         typedef enum { MANHATTAN, DIAGONAL, EUCLID }DistanceFormula;
-        typedef pair<int, int> CellCoordinate;
         // (Below) pPair represents a Vertex (F-Cost, <x-coordinate, y-coordinate>)
         typedef pair<float, pair<int, int>> pPair;
 
@@ -166,7 +167,7 @@ class A_Star {
          * @param goalCell Goal coordinates
          * @return ** void 
          */
-        void Search(CellCoordinate startCell, CellCoordinate goalCell);
+        bool Search(CellCoordinate startCell, CellCoordinate goalCell);
 
 };
 

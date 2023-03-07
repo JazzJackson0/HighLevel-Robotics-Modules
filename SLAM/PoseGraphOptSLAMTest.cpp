@@ -1,37 +1,33 @@
 #include <gtest/gtest.h>
-
+#include "PoseGraphOptSLAM.hpp"
 
 class PoseGraphOptSLAMTest : public ::testing::Test {
 
 	protected:
 
 		PoseGraphOptSLAMTest() {
+			
+			int max_nodes = 100;
+			int pose_dimension = 3;
+			int independent_val = 10; // ???? I Don't remember what this is & its not used in the code, look at notes.
+			int guess_variation = 1;
 
+			pose_graph = new PoseGraphOptSLAM(max_nodes, pose_dimension, independent_val, guess_variation);
 		}
 			
-		~PoseGraphOptSLAMTest() {
+		//~PoseGraphOptSLAMTest() {}
 
-		}
+		PoseGraphOptSLAM *pose_graph;
 };
 
-/**
- * @brief 
- * **/
-TEST(PoseGraphOptSLAMTest, Constructor) {
-	// Constructor
-	int val1, val2;
-	bool condition;
-	EXPECT_EQ(val1, val2);
-	EXPECT_TRUE(condition);
-	ASSERT_TRUE(condition);
-}
 
 /**
  * @brief 
  *
  * **/
-TEST(PoseGraphOptSLAMTest, Run1) {
+TEST_F(PoseGraphOptSLAMTest, Run1) {
 
+	pose_graph->Run();
 }
 
 

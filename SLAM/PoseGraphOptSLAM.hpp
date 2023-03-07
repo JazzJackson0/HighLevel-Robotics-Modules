@@ -157,9 +157,7 @@ class PoseGraphOptSLAM {
          * 
          * @return ** void 
          */
-        void Run() {
-            
-        }
+        void Run();
 
 
 };

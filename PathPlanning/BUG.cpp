@@ -2,6 +2,8 @@
 
 DistSensorData Bug::Get_DistSensorData() {
 	
+
+
 	// Receive Distance Data from Serial Comm
 
 }
@@ -31,7 +33,7 @@ void Bug::Go(Directions direction, float speed) {
 
 
 
-float Bug::Get_GoalDistance(pair<int, int> currentPos) {
+float Bug::Get_GoalDistance(CellCoordinate currentPos) {
 	return (float)(sqrt( pow( ( currentPos.first - goalPoint.first ), 2 ) + 
 		pow( ( currentPos.second - goalPoint.second ), 2 ) ));
 }
@@ -262,7 +264,7 @@ void Bug::FollowWall(BugType type) {
 
 
 
-Bug::Bug(Pose start_pose, pair<int, int> goal, float f_speed, float t_speed) {
+Bug::Bug(Pose start_pose, CellCoordinate goal, float f_speed, float t_speed) {
 	startPoint.first = start_pose.position.first;
 	startPoint.second = start_pose.position.second;
 	startOrientation = start_pose.orientation;

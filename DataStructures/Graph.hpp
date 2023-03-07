@@ -41,7 +41,8 @@ class Graph {
         /**
          * @brief Initialize a Graph
          * 
-         * @param adjacency_list 
+         * @param adjacency_list The data structure for the Graph. An array of vertices, each storing their own
+         *          Linked List of adjacent vertices.
          * @param state Sets Graph to be Directed (TRUE) or Undirected (FALSE) 
          * 
          */
@@ -94,17 +95,25 @@ class Graph {
          */
         void Make_Connection(int vertex1_ID, int vertex2_ID, Z weight);
 
+        /**
+         * @brief Returns a list of all edges (with their correspoinding vertices) adjacent to the given vertex
+         * 
+         * @param vertex_ID ID of the vertex whose 
+         * @return ** std::list<Edge<Z>> 
+         */
+        std::list<Edge<Z>> Get_AdjacentVertices(int vertex_ID);
+
 
         /**
          * @brief Connect new Vertex to another in the graph.
          * 
+         * @param new_vertex_data The data that will make the new Vertex
          * @param vertexConnect_ID ID of the Vertex in the Graph that will connect to 
          *                          the new Vertex.
-         * @param new_vertex_data The data that will make the new Vertex
          * @param weight Weight of the connection between Vertices.
          * @return ** void 
          */
-        void Connect_NewVertex(int vertexConnect_ID, T new_vertex_data, Z weight);
+        void Connect_NewVertex(T new_vertex_data, int vertexConnect_ID, Z weight);
 
 
         /**
@@ -147,13 +156,10 @@ class Graph {
         /**
          * @brief Performs Depth First Search. (Recursively)
          * 
-         * @param starting_vertex 
-         * @param target_vertex 
-         * @param Visited 
-         * @return ** void 
+         * @param target_data 
+         * @return ** Returns the vertex if found, NULL if not.
          */
-        void DFS(Vertex<T, Z> starting_vertex, Vertex<T, Z> target_vertex, 
-            std::vector<Vertex<T, Z>> Visited);
+        Vertex<T, Z> DFS(T target_data);
 
 
         /**
@@ -161,9 +167,9 @@ class Graph {
          * 
          * @param starting_vertex 
          * @param target_vertex 
-         * @return ** void 
+         * @return ** Returns the vertex if found, NULL if not.
          */
-        void BFS(Vertex<T, Z> starting_vertex, Vertex<T, Z> target_vertex);
+        Vertex<T, Z> BFS(T target_data);
 };
 
 

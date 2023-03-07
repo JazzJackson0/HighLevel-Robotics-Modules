@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include "ParticleFilter.hpp"
 
 
 class ParticleFilterTest : public ::testing::Test {
@@ -7,32 +8,26 @@ class ParticleFilterTest : public ::testing::Test {
 
 		ParticleFilterTest() {
 
+			int max_particles = 50;
+			int pose_dimensions = 3; 
+			int time_interval = 1;
+			pfilter = new ParticleFilter(max_particles, pose_dimensions, time_interval);
 		}
 			
 		~ParticleFilterTest() {
 
 		}
+
+		ParticleFilter *pfilter;
 };
 
-/**
- * @brief
- *
- * **/
-TEST(ParticleFilterTest, Constructor) {
-	// Deal with constructor
-	//int val1, val2;
-	//bool condition;
-	//EXPECT_EQ(val1, val2);
-	//EXPECT_TRUE(condition);
-	//ASSERT_TRUE(condition);
-
-	EXPECT_EQ(1, 1);
-}
 
 /**
  * @brief
  *
  * **/
-TEST(ParticleFilterTest, RunMonteCarlo1) {
+TEST_F(ParticleFilterTest, RunMonteCarlo1) {
+
+	pfilter->RunMonteCarlo();
 
 }

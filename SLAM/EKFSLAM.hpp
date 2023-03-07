@@ -169,12 +169,12 @@ class EKFSlam {
 		 * @param map A vector of all landmark (x, y) positions. Known or Unknown.
 		 * @param pose_dim Pose Dimensions
 		 * @param landmark_dim Landmark Dimensions
-		 * @param landmark_num Number of Landmarks
+		 * @param max_landmark_num Max Number of Landmarks
 		 * @param obs_covariance Observation Covariance Matrix
 		 * @param motion_covariance Expresses the uncertainty in the motion model.
          */
         EKFSlam(Eigen::VectorXf initial_position, std::vector<VectorXf> map, 
-				int pose_dim, int landmark_dim, int landmark_num, 
+				int pose_dim, int landmark_dim, int max_landmark_num, 
 				Eigen::MatrixXf obs_covariance, Eigen::MatrixXf motion_covariance);
 
 
