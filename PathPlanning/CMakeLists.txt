@@ -8,7 +8,7 @@ set(SOURCES_A AStarTest.cpp AStar.cpp)
 set(TARGET_B bugTest)
 set(SOURCES_B BUGTest.cpp BUG.cpp)
 set(TARGET_C rrtTest)
-set(SOURCES_C RRTTest.cpp RRT.cpp ${PROJECT_SOURCE_DIR}/../DataStructures/Graph.hpp)
+set(SOURCES_C RRTTest.cpp RRT.cpp ${CMAKE_SOURCE_DIR}/../DataStructures/Graph.cpp)
 
 add_library(GraphLib ../DataStructures/Graph.cpp)
 

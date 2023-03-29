@@ -11,11 +11,14 @@ using std::make_pair;
 
 typedef struct particle Particle;
 typedef struct odometry_reading OdometryReadng;
+typedef struct scan Scan;
 
 class ParticleFilter {
 
     private:
 		vector<Particle> ParticleSet;
+		float SearchDist;
+		float SearchWidth;
 		int MaxParticles;
 		int PoseDimensions;
 		float TimeInterval;
@@ -26,6 +29,18 @@ class ParticleFilter {
 		int MapWidth;
 		int MapHeight;
         
+		
+
+		/**
+		 * @brief Searches a given distance and width around a given particle for feature points 
+		 * 			and creates an array of those points
+		 * 
+		 * @param particle The particle around which feature points will be checked for.
+		 * 
+		 * @return ** Scan - Returns a vector of all the feature points picked up within range of the give particle
+		 */
+		vector<Scan> GetFeaturePoints(Particle particle);
+
 		
 		/**
          * @brief Runs the particle generation and importance weighting.
@@ -73,8 +88,10 @@ class ParticleFilter {
 		 * @param max_particles Max Number of Particles 
 		 * @param pose_dimensions Robot/Particle pose dimensions
 		 * @param time_interval Time interval ..........................
+		 * @param search_dist The distance from the particle to search for map features
+		 * @param search_width The Width of the range around the particle to search for map features
          */
-        ParticleFilter(int max_particles, int pose_dimensions, float time_interval);
+        ParticleFilter(int max_particles, int pose_dimensions, float time_interval, float search_dist, float search_width);
 
 
 		/**
@@ -95,5 +112,10 @@ struct particle {
 struct odometry_reading {
 	float RobotTranslation; 
 	float RobotRotation;
+};
+
+struct scan {
+	float range;
+	float bearing;
 };
 

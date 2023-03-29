@@ -51,7 +51,7 @@ bool RRT::Set_NewVertex(std::pair<int, float> nearestVIndex, Node randPos,
         // Turn random position into a vertex and add it to Graph
 		randPos.DistanceFromStart = Get_Distance(randPos, nearest) + prev_dist_from_start;
 		randPos.ParentIndex = nearestVIndex.first;
-        RapidTree.Connect_NewVertex(nearestVIndex.first, randPos, 0);
+        RapidTree.Connect_NewVertex(randPos, randPos.ParentIndex,0);
         return true;
     }
 
@@ -62,7 +62,7 @@ bool RRT::Set_NewVertex(std::pair<int, float> nearestVIndex, Node randPos,
 	qNew.y = (int)(maxConnectDist * sin(angle));
 	qNew.DistanceFromStart = Get_Distance(qNew, nearest) + prev_dist_from_start;
 	qNew.ParentIndex = nearestVIndex.first;
-	RapidTree.Connect_NewVertex(nearestVIndex.first, qNew, 0);
+	RapidTree.Connect_NewVertex(qNew, qNew.ParentIndex, 0);
 	return true;
 }
 

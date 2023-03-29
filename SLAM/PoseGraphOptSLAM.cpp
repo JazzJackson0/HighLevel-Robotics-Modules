@@ -65,9 +65,38 @@ void PoseGraphOptSLAM::BuildErrorFunction() {
 
 
 
-std::vector<VectorXf> PoseGraphOptSLAM::ICP(void) {
+void PoseGraphOptSLAM::FrontEnd(PointCloud current_landmarks) {
 	
-	return NULL;
+	Pose pose;
+	PoseEdge edge;
+	pose.Landmarks = current_landmarks;
+
+	// Check for level of overlap between landmark set of current & previous pose
+
+	// Add Pose & Edge to Graph if overlap is insignificant
+	
+
+		ICP icp(PoseDimensions);
+		icp.RunSVD(current_landmarks);
+
+		// Turn R & t to a Transformation Matrix!!!!!!!!!!!!!!!!!!!!
+		//pose.TransformationMatrix = ;
+
+		if (Pose_Graph.Get_NumOfVertices() == 0)
+			PreviousPose = Pose_Graph.Add_Vertex(pose);
+		
+		else {
+			// Get Relative Transformation between 2 poses
+			edge.TransformationMatrix = pose.TransformationMatrix * PreviousPose.Data.TransformationMatrix;
+			//edge.NoiseInfoMatrix = ; Calculate Noise Matrix??
+			PreviousPose = Pose_Graph.AutoConnect_NewVertex(pose, edge);
+		}
+
+		// Search Graph in given radius to find possible loop closure (Excluding the n most recently added poses)
+
+		// Connect to the Closest out of those that are found in the radius.
+
+		// If Loop Closure is made: Send off for Optimization
 
 } 
 

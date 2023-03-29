@@ -1,5 +1,12 @@
 #include "ParticleFilter.hpp"
 
+
+vector<Scan> ParticleFilter::GetFeaturePoints(Particle particle) {
+
+	// Pseudo Scan: Check a given distance and width around the particle for feature point coordinates
+
+}
+
 vector<Particle> ParticleFilter::RunParticleFilter(vector<Particle> particle_set, 
 	vector<vector<float>> scan, OdometryReadng odom) {
 	
@@ -148,11 +155,13 @@ float ParticleFilter::ProbabilityDensityFunction(float robot_data,
 
 
 
-ParticleFilter::ParticleFilter(int max_particles, int pose_dimensions, float time_interval) {
+ParticleFilter::ParticleFilter(int max_particles, int pose_dimensions, float time_interval, float search_dist, float search_width) {
 	
 	MaxParticles = max_particles;
 	PoseDimensions = pose_dimensions;
 	TimeInterval = time_interval;
+	SearchDist = search_dist;
+	SearchWidth = search_width;
 	unsigned seed;
 
 	// Uniformly Distribute Particles

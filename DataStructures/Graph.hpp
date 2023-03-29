@@ -46,7 +46,7 @@ class Graph {
          * @param state Sets Graph to be Directed (TRUE) or Undirected (FALSE) 
          * 
          */
-        Graph(std::vector<Vertex<T, Z>> &adjacency_list, bool state);
+        Graph(std::vector<Vertex<T, Z>> adjacency_list, bool state);
 
 
         /**
@@ -80,9 +80,9 @@ class Graph {
          * @brief Adds a vertex to the Graph.
          * 
          * @param data Data to be added.
-         * @return ** void 
+         * @return ** Vertex<T, Z> - The newly added Vertex 
          */
-        void Add_Vertex(T data);
+        Vertex<T, Z> Add_Vertex(T data);
 
 
         /**
@@ -111,9 +111,31 @@ class Graph {
          * @param vertexConnect_ID ID of the Vertex in the Graph that will connect to 
          *                          the new Vertex.
          * @param weight Weight of the connection between Vertices.
+         * @return ** Vertex<T, Z> - The newly added Vertex  
+         */
+        Vertex<T, Z> Connect_NewVertex(T new_vertex_data, int vertexConnect_ID, Z weight);
+
+        // NEW !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+        /**
+         * @brief Connect new Vertex to the previously added vertex
+         * 
+         * @param new_vertex_data The data that will make the new Vertex
+         * @param weight Weight of the connection between Vertices.
+         * @return ** Vertex<T, Z> - The newly added Vertex  
+         */
+        Vertex<T, Z> AutoConnect_NewVertex(T new_vertex_data, Z weight);
+
+
+        /**
+         * @brief C
+         * 
          * @return ** void 
          */
-        void Connect_NewVertex(T new_vertex_data, int vertexConnect_ID, Z weight);
+        Vertex<T, Z> Get_PreviousVertex();
+
+        // NEW !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        
 
 
         /**

@@ -18,6 +18,7 @@
 #include <cppad/utility/sparse2eigen.hpp>
 
 #include "../DataStructures/Graph.hpp"
+#include "../ScanMatching/ICP.hpp"
 
 using CppAD::AD;
 using CppAD::NearEqual;
@@ -28,6 +29,7 @@ using namespace::Eigen;
 using std::vector;
 using std::pair;
 
+typedef struct pose Pose;
 typedef struct pose_edge PoseEdge;
 typedef struct odometry_reading OdometryReadng;
 typedef std::vector<size_t> SizeVector;
@@ -41,12 +43,13 @@ class PoseGraphOptSLAM {
 	int MaxPoses;
 	int PoseDimensions;     
 	float time_interval;
-	VectorXf PreviousPose;
+	Vertex<Pose, PoseEdge> PreviousPose;
 	std::vector<AD<float>> X; // x j-i, x ij, y j-i, y ij, theta i, theta j, theta ij
 	std::vector<AD<float>> Y;
 	ADFun<float> ErrorFunction;
 	int VariationAroundGuess;
 	float min_convergence_thresh;
+	Graph<Pose, PoseEdge> Pose_Graph;
 	
 	private:
 
@@ -99,10 +102,12 @@ class PoseGraphOptSLAM {
         /**
          * @brief The Front End: Turns raw sensor data (and corrected poses from the Back End)
          *          into Edges/Constraints using the Iterative Closest Point Algorithm.
+		 * 
+		 * @param current_landmarks Current Landmarks picked up by the most resent scan
          * 
          * @return ** vector<VectorXf> - Holds all of the nodes (pose vectors)in the graph.
          */
-		std::vector<VectorXf> ICP(void);
+		void FrontEnd(PointCloud current_landmarks);
 
 
 
@@ -162,10 +167,17 @@ class PoseGraphOptSLAM {
 
 };
 
+struct pose {
+
+	//int Index; // Pose's Graph Index
+	MatrixXf TransformationMatrix; // Global Transformation Matrix. (w/ Current Position & Orientation)
+	VectorXf pose;
+	PointCloud Landmarks;
+};
 
 struct pose_edge {
-    pair<int, int> PoseIndices; // Indices of the 2 Poses
-	VectorXf TransformationMatrix; // Transformation Matrix.
+    //pair<int, int> PoseIndices; // Graph Indices of the 2 Poses
+	MatrixXf TransformationMatrix; // Transformation Matrix.
     MatrixXf NoiseInfoMatrix; // Encodes the uncertainty in the transformation to the Pose.
 };
 

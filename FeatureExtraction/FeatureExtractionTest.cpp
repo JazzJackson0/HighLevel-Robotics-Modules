@@ -19,7 +19,31 @@ class FeatureExtractionTest : public ::testing::Test {
  *	@brief 
  *
  * **/
-TEST_F(FeatureExtractionTest, Something) {
+TEST_F(FeatureExtractionTest, LandmarksFromScan1) {
 	
 
 }
+
+
+/**
+ *	@brief 
+ *
+ * **/
+TEST_F(FeatureExtractionTest, DetectSeedSegment1) {
+	
+
+}
+
+
+
+/**
+ *	@brief 
+ *
+ * **/
+TEST_F(FeatureExtractionTest, GrowSeedSegment1) {
+	
+
+}
+
+
+// Not going to test the Setters

@@ -1,13 +1,17 @@
 #include "Graph.hpp"
 
 template <typename T, typename Z>        
-Graph<T, Z>::Graph() {}
+Graph<T, Z>::Graph() {
+
+    Directed = false;
+}
 
 
 template <typename T, typename Z>        
-Graph<T, Z>::Graph(std::vector<Vertex<T, Z>> &adjacency_list, bool state) : G(adjacency_list) {
+Graph<T, Z>::Graph(std::vector<Vertex<T, Z>> adjacency_list, bool state) : G(adjacency_list) {
 
     Directed = state;
+    G = adjacency_list;
 }
 
 
@@ -41,17 +45,19 @@ T Graph<T, Z>::Get_Vertex(int vertex_ID) {
 
 
 template <typename T, typename Z>
-void Graph<T, Z>::Add_Vertex(T data) {
+Vertex<T, Z> Graph<T, Z>::Add_Vertex(T data) {
 
     Vertex<T, Z> new_vertex;
     new_vertex.Data = data;
     new_vertex.Vertex_ID = G.size();
     G.push_back(new_vertex);
+
+    return new_vertex;
 }
 
 
 template <typename T, typename Z>
-void Graph<T, Z>::Make_Connection(int vertex1_ID, int vertex2_ID, Z weight) {
+Vertex<T, Z> Graph<T, Z>::Make_Connection(int vertex1_ID, int vertex2_ID, Z weight) {
 
     // Edge from V1 to V2
     Edge<Z> new_edge;
@@ -76,10 +82,11 @@ std::list<Edge<Z>> Graph<T, Z>::Get_AdjacentVertices(int vertex_ID) {
 
 
 template <typename T, typename Z>
-void Graph<T, Z>::Connect_NewVertex(T new_vertex_data, int vertexConnect_ID, Z weight) {
+Vertex<T, Z> Graph<T, Z>::Connect_NewVertex(T new_vertex_data, int vertexConnect_ID, Z weight) {
 
-    Add_Vertex(new_vertex_data);
+    Vertex<T, Z> new_vert = Add_Vertex(new_vertex_data);
     Make_Connection(G.size() - 1, vertexConnect_ID, weight);
+    return new_vert;
 }
 
 
