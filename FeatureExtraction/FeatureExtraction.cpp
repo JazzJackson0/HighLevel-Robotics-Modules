@@ -229,9 +229,9 @@ Landmark FeatureExtractor::ValidationGate(LineSegment feature) {
      
     // If Validated
     if (1 /*Nothing to Validate right now*/) {
-        validated.landmark_points = feature.line_points;
-        validated.landmark_line = feature.line_fit;
-        validated.landmark_id = LandmarkIDs++;
+        validated.points = feature.points;
+        validated.line = feature.line_fit;
+        validated.id = LandmarkIDs++;
         return validated;
     }
     
@@ -261,7 +261,7 @@ void FeatureExtractor::CheckOverlap() {
         
         for (int j = 0; j < AllLandmarks.size(); j++) {
 
-            float dist = Get_EuclideanDistance(NewLandmarks[i].landmark_position, AllLandmarks[j].landmark_position);
+            float dist = Get_EuclideanDistance(NewLandmarks[i].position, AllLandmarks[j].position);
 
             if (dist < overlap_threshold) {
 
@@ -325,8 +325,11 @@ vector<Landmark> FeatureExtractor::LandmarksFromScan(vector<VectorXf> current_sc
         origin.x = 0;
         origin.y = 0;
         origin.angle = 0;
-        landmark.landmark_position = OrthogProjectPoint2Line(General2SlopeInt(landmark.landmark_line), origin);
+        landmark.position = OrthogProjectPoint2Line(General2SlopeInt(landmark.line), origin);
         NewLandmarks.push_back(landmark);
+
+        landmark.range = Get_EuclideanDistance(RobotPos, landmark.position);
+        landmark.bearing = atan2(landmark.position.y, landmark.position.x) - RobotPos.angle;
     }
 
     CheckOverlap();
@@ -362,7 +365,7 @@ LineSegment FeatureExtractor::DetectSeedSegment(int num_of_points) {
                 break;
             }
 
-            seed_seg.line_points.push_back(LaserPoints[k]);
+            seed_seg.points.push_back(LaserPoints[k]);
             CurrentPointsInLineSeg++;
             //PredictedPoints.push_back(predicted);
         }

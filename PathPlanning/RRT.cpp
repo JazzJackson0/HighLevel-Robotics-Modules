@@ -4,7 +4,7 @@ std::pair<int, float> RRT::Get_NearestVertexIndex(Node randPos) {
     
     float min_dist = std::numeric_limits<float>::max();
     int nearestVertexIndex = -1;
-    int n_Vertices = RapidTree.Get_Vertices().size(); // Number of Vertices in Vertex Set
+    int n_Vertices = RapidTree.Get_NumOfVertices(); // Number of Vertices in Graph
 
     // Calculate distance between randPos and every vertex in set.
     for (int i = 0; i < n_Vertices; i++) {
@@ -51,7 +51,7 @@ bool RRT::Set_NewVertex(std::pair<int, float> nearestVIndex, Node randPos,
         // Turn random position into a vertex and add it to Graph
 		randPos.DistanceFromStart = Get_Distance(randPos, nearest) + prev_dist_from_start;
 		randPos.ParentIndex = nearestVIndex.first;
-        RapidTree.Connect_NewVertex(randPos, randPos.ParentIndex,0);
+		RapidTree.Connect_Vertices(RapidTree.Add_Vertex(randPos, false, 0).VertexID, randPos.ParentIndex, 0);
         return true;
     }
 
@@ -62,7 +62,7 @@ bool RRT::Set_NewVertex(std::pair<int, float> nearestVIndex, Node randPos,
 	qNew.y = (int)(maxConnectDist * sin(angle));
 	qNew.DistanceFromStart = Get_Distance(qNew, nearest) + prev_dist_from_start;
 	qNew.ParentIndex = nearestVIndex.first;
-	RapidTree.Connect_NewVertex(qNew, qNew.ParentIndex, 0);
+	RapidTree.Connect_Vertices(RapidTree.Add_Vertex(qNew, false, 0).VertexID, qNew.ParentIndex, 0);
 	return true;
 }
 
@@ -72,7 +72,7 @@ std::vector<int> RRT::Get_Neighbors(float search_radius, Node randPos) {
 
 	std::vector<int> NeighboringVectors;
 
-    int n_Vertices = RapidTree.Get_Vertices().size(); // Number of Vertices in Vertex Set
+    int n_Vertices = RapidTree.Get_NumOfVertices(); // Number of Vertices in Graph
 
     // Calculate distance between randPos and every vertex in set.
     for (int i = 0; i < n_Vertices; i++) {
@@ -117,7 +117,7 @@ void RRT::Rewire_Neighbors(std::vector<int> neighbors, int nodeIndex, Node randP
 		if (neighbor_dist < RapidTree.Get_Vertex(neighbors[i]).DistanceFromStart) {
 
 			RapidTree.Disconnect_Vertices(i, RapidTree.Get_Vertex(i).ParentIndex);
-			RapidTree.Make_Connection(i, nodeIndex, 0);
+			RapidTree.Connect_Vertices(i, nodeIndex, 0);
 			// You need to recalculate the DistanceFromStart for all children of i.
 				// Maybe using BFS or DFS
 		}	
@@ -147,7 +147,7 @@ void RRT::Run_RRT(Node start, Node goal, float maxConnectionDistance) {
 	Start = start;
 	Goal = goal;
 
-    RapidTree.Add_Vertex(Start);
+    RapidTree.Add_Vertex(Start, false, 0);
     int k = RapidTree.Get_NumOfVertices() - 1;
     
     // While the Goal has not been reached.
@@ -166,7 +166,7 @@ void RRT::Run_RRTStar(Node start, Node goal, float maxConnectionDistance, float 
 	Goal = goal;
 
 	SearchRadius = search_radius;
-	RapidTree.Add_Vertex(Start);
+	RapidTree.Add_Vertex(Start, false, 0);
     int k = RapidTree.Get_NumOfVertices() - 1;
     
     // While the Goal has not been reached.
@@ -185,7 +185,7 @@ void RRT::Run_RRTStar(Node start, Node goal, float maxConnectionDistance, float 
 		else { Set_NewVertex(nearest_index, randP, maxConnectionDistance); }
 
 		// Re-wire other neighbors in search radius
-		int randP_index = RapidTree.Get_Vertices().back().Vertex_ID;
+		int randP_index = RapidTree.Get_Graph().back().VertexID;
 		Rewire_Neighbors(neighbors, randP_index, randP);
 
     }

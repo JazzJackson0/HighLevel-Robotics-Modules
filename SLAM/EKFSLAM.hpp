@@ -5,8 +5,9 @@
 
 #include </usr/include/eigen3/Eigen/Dense>
 #include </usr/include/eigen3/Eigen/src/Core/Matrix.h>
-
 #include <cppad/cppad.hpp>
+
+#include "../FeatureExtraction/FeatureExtraction.hpp"
 
 using namespace::CppAD;
 using namespace::Eigen;
@@ -55,6 +56,8 @@ class EKFSlam {
 		ADFun<float> UpdateFunction;		
 		ADFun<float> ObservationFunction;	
 
+		Landmark Correspondence[1000] = { NULL };
+
 		/**
 		 * @brief Updates the pose based on a given mathematical motion model / Update Function.
 		 *
@@ -69,14 +72,14 @@ class EKFSlam {
 
 		/**
 		 * @brief Creates a Landmark Range & Bearing Estimation based on a given mathematical model / Observation Function.
-		 * 				|||  This function currently assumes a 3D pose and 2D landmark position.
+		 * 				|||  This function currently assumes a 2D pose and 2D landmark position.
 		 *
 		 * @param robot_pose_est Estimated Robot Pose (the output of the Update Pose function)
 		 * @param landmark_position_est Estimated Landmark Position (Obtained from......................)
 		 *
 		 * @return ** VectorXf Updated Landmark Data
 		 */
-		VectorXf GetEstimatedScan(VectorXf robot_pose_est, VectorXf landmark_position_est);
+		VectorXf GetEstimatedScan(VectorXf robot_pose_est, Point landmark_position_est);
 
 
 
@@ -100,34 +103,6 @@ class EKFSlam {
 		 * @return ** void
 		 */
 		void BuildObservationFunctionFor_H();
-
-
-
-        /**
-         * @brief Update the Mean with a new Predicted State and propagate the Covariance Matrix
-         *          forward in time.
-		 *
-		 * @param current_pose The current Pose that will be updated while going through 
-		 * 						the Prediction Step
-		 * @param odom Odometry reading (translation velocity & rotation velocity) 
-         * 
-         * @return ** void 
-         */
-        void Prediction(VectorXf current_pose, OdometryReadng odom);
-
-
-
-        /**
-         * @brief Correct the Predicted state using the given Input data and 
-         *          a Kalman Gain weight factor applied to the given estimate.
-		 * 
-		 * @param current_scan The current range scan.
-		 * @param odom Odometry reading (translation velocity & rotation velocity) 
-         * 
-         * @return ** void 
-         */
-        void Correction(VectorXf current_scan, OdometryReadng odom);
-
 
 
         /**
@@ -159,6 +134,32 @@ class EKFSlam {
 		 * @return ** VectorXf - The Current Pose
 		 */
 		VectorXf GetPoseFromStateVector();
+
+
+		/**
+         * @brief Update the Mean with a new Predicted State and propagate the Covariance Matrix
+         *          forward in time.
+		 *
+		 * @param current_pose The current Pose that will be updated while going through 
+		 * 						the Prediction Step
+		 * @param odom Odometry reading (translation velocity & rotation velocity) 
+         * 
+         * @return ** void 
+         */
+        void Prediction(VectorXf current_pose, OdometryReadng odom);
+
+
+
+        /**
+         * @brief Correct the Predicted state using the given Input data and 
+         *          a Kalman Gain weight factor applied to the given estimate.
+		 * 
+		 * @param current_scan The current range scan.
+		 * @param odom Odometry reading (translation velocity & rotation velocity) 
+         * 
+         * @return ** void 
+         */
+        void Correction(std::vector<Landmark> current_scan, OdometryReadng odom);
     
 	public:
 
@@ -180,11 +181,13 @@ class EKFSlam {
 
        
 		/**
-         * @brief Run the EKF SLAM Algorithm
-         * 
-         * @return ** void 
-         */
-        void Run();
+		 * @brief Run the EKF SLAM Algorithm
+		 * 
+		 * @param current_scan 
+		 * @param current_pose 
+		 * @param odom 
+		 */
+        void Run(std::vector<VectorXf> current_scan, VectorXf current_pose, OdometryReadng odom);
 };
 
 

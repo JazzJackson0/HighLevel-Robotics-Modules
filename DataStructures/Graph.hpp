@@ -2,11 +2,12 @@
 #include <list>
 #include <vector>
 using std::list; // Linked Lists
+using std::vector;
 
 
 template <typename Z>
 struct Edge {
-    int AdjacentVertex_ID;
+    int AdjacentVertexID;
     Z Weight;
 };
 
@@ -14,10 +15,11 @@ struct Edge {
 
 template <typename T, typename Z>
 struct Vertex {
-    Vertex(int id, std::list<Edge<Z>> &adj) : Vertex_ID(id), Adjacents(adj) {} // Struct Constructor
-    int Vertex_ID;
+    Vertex(int id, vector<Edge<Z>> &adj) : VertexID(id), Adjacents(adj) {} // Struct Constructor
+    int VertexID;
     T Data;
-    std::list<Edge<Z>> Adjacents;
+    vector<Edge<Z>> Adjacents;
+    int adjacents_pointer;
 };
 
 
@@ -26,8 +28,10 @@ template <typename T, typename Z>
 class Graph {
 
     private:
-        bool Directed = false;
-        std::vector<Vertex<T, Z>> G;    
+        bool Directed;
+        vector<Vertex<T, Z>> G;
+        int RecentVertexID;  
+        int NumOfEdges;  
     
     public:
         
@@ -46,7 +50,7 @@ class Graph {
          * @param state Sets Graph to be Directed (TRUE) or Undirected (FALSE) 
          * 
          */
-        Graph(std::vector<Vertex<T, Z>> adjacency_list, bool state);
+        Graph(vector<Vertex<T, Z>> adjacency_list, bool state);
 
 
         /**
@@ -67,22 +71,52 @@ class Graph {
 
 
         /**
-         * @brief Returns the data of the Vertex in the Vertex Set which 
-         *          corresponds to the given ID.
+         * @brief Returns the number of Edges in the Vertex set
          * 
-         * @param vertex_ID ID of the Vertex whose data will be returned
-         * @return ** T Data of the desired Vertex
+         * @return ** int - Number of Edges in Vertex Set
          */
-        T Get_Vertex(int vertex_ID);
+        int Get_NumOfEdges();
 
 
         /**
-         * @brief Adds a vertex to the Graph.
+         * @brief Returns the data of the Vertex in the Vertex Set which 
+         *          corresponds to the given ID.
+         * 
+         * @param vertex_id ID of the Vertex whose data will be returned
+         * @return ** T Data of the desired Vertex
+         */
+        T Get_Vertex(int vertex_id);
+
+
+        /**
+         * @brief Returns all Vertices in the form of a pair.
+         *          ||| First Element in Pair: Number of Vertices in Graph.
+         *          ||| Second Element in Pair: Vector array of all Vertices.
+         * 
+         * @return ** vector<Vertex<T, Z>>
+         */
+        vector<Vertex<T, Z>> Get_Graph();
+
+
+        /**
+         * @brief Returns a list of all edges (with their correspoinding vertices) adjacent to the given vertex
+         * 
+         * @param vertex_id ID of the vertex whose 
+         * @return ** vector<Edge<Z>> 
+         */
+        vector<Edge<Z>> Get_AdjacentVertices(int vertex_id);
+
+
+        /**
+         * @brief Adds a vertex to the Graph. If 'connected' is True the vertex will connect to the most recently
+         *      added vertex. Else, the vertex remains in the graph unconnected.
          * 
          * @param data Data to be added.
+         * @param connected IF false, leave vertex unconnected, If true, connect vertex to most recent vertex
+         * @param weight Applied to the edge between the connected vertices if 'connected' is True
          * @return ** Vertex<T, Z> - The newly added Vertex 
          */
-        Vertex<T, Z> Add_Vertex(T data);
+        Vertex<T, Z> Add_Vertex(T data, bool connected, Z weight);
 
 
         /**
@@ -93,75 +127,7 @@ class Graph {
          * @param weight Weight of the edge between the Vertices.
          * @return ** void 
          */
-        void Make_Connection(int vertex1_ID, int vertex2_ID, Z weight);
-
-        /**
-         * @brief Returns a list of all edges (with their correspoinding vertices) adjacent to the given vertex
-         * 
-         * @param vertex_ID ID of the vertex whose 
-         * @return ** std::list<Edge<Z>> 
-         */
-        std::list<Edge<Z>> Get_AdjacentVertices(int vertex_ID);
-
-
-        /**
-         * @brief Connect new Vertex to another in the graph.
-         * 
-         * @param new_vertex_data The data that will make the new Vertex
-         * @param vertexConnect_ID ID of the Vertex in the Graph that will connect to 
-         *                          the new Vertex.
-         * @param weight Weight of the connection between Vertices.
-         * @return ** Vertex<T, Z> - The newly added Vertex  
-         */
-        Vertex<T, Z> Connect_NewVertex(T new_vertex_data, int vertexConnect_ID, Z weight);
-
-        // NEW !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-        /**
-         * @brief Connect new Vertex to the previously added vertex
-         * 
-         * @param new_vertex_data The data that will make the new Vertex
-         * @param weight Weight of the connection between Vertices.
-         * @return ** Vertex<T, Z> - The newly added Vertex  
-         */
-        Vertex<T, Z> AutoConnect_NewVertex(T new_vertex_data, Z weight);
-
-
-        /**
-         * @brief C
-         * 
-         * @return ** void 
-         */
-        Vertex<T, Z> Get_PreviousVertex();
-
-        // NEW !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        
-
-
-        /**
-         * @brief Returns all Vertices in the form of a pair.
-         *          ||| First Element in Pair: Number of Vertices in Graph.
-         *          ||| Second Element in Pair: Vector array of all Vertices.
-         * 
-         * @return ** std::vector<Vertex<T, Z>>
-         */
-        std::vector<Vertex<T, Z>> Get_Vertices();
-
-
-        /**
-         * @brief Prints all Vertices in the Graph.
-         * 
-         * @return ** void 
-         */
-        void Print_Vertices();
-
-
-        /**
-         * @brief Prints all edges in the Graph.
-         * 
-         * @return ** void 
-         */
-        void Print_Edges();
+        void Connect_Vertices(int vertex1_ID, int vertex2_ID, Z weight);
 
 
         /**
@@ -192,6 +158,24 @@ class Graph {
          * @return ** Returns the vertex if found, NULL if not.
          */
         Vertex<T, Z> BFS(T target_data);
+
+        
+    
+        /**
+         * @brief Prints all Vertices in the Graph.
+         * 
+         * @return ** void 
+         */
+        void Print_Vertices();
+
+
+        /**
+         * @brief Prints all edges in the Graph.
+         * 
+         * @return ** void 
+         */
+        void Print_Edges();
+              
 };
 
 

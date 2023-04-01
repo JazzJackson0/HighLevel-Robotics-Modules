@@ -84,6 +84,15 @@ class ICP {
 		MatrixXf CalculateJacobian(VectorXf ReferencePoint, VectorXf NewPoint); 
 
 
+		/**
+		 * @brief Calculate the Center of Mass for a given Point Cloud
+		 * 
+		 * @param p_cloud The cloud you calculate the center of mass of
+		 * @return VectorXf Center of Mass
+		 */
+		VectorXf Get_CenterOfMass(PointCloud p_cloud);
+
+
 	public:
 	
 
@@ -102,20 +111,21 @@ class ICP {
 		 * @param RefPointSet Reference Point Set
 		 * @param NewPointSet New Point Set
 		 *
-		 * @return ** void
+		 * @return ** RotationTranslation
 		 */
-		void RunSVDAlign(PointCloud RefPointSet, PointCloud NewPointSet);
+		RotationTranslation RunSVDAlign(PointCloud RefPointSet, PointCloud NewPointSet);
 
 
 
 		/**
 		 * @brief Run Point Cloud Registration with Unkown Data Association.
 		 *
+		 * @param RefPointCloud New Point Cloud
 		 * @param NewPointCloud New Point Cloud
 		 *
-		 * @return ** void
+		 * @return ** RotationTranslation
 		 */
-		void RunSVD(PointCloud NewPointCloud);
+		RotationTranslation RunSVD(PointCloud RefPointCloud, PointCloud NewPointCloud);
 
 		
 
@@ -136,5 +146,12 @@ class ICP {
 struct point_cloud {
 	std::vector<VectorXf> Points;
 	std::vector<float> Weights;
+};
+
+struct rotation_translation {
+	MatrixXf rotation_matrix;
+	VectorXf translation_vector;
+	VectorXf center_mass;
+	float weight;
 };
 

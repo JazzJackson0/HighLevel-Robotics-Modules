@@ -34,9 +34,9 @@ TEST_F(GraphTest, isDirectedTest) {
 TEST_F(GraphTest, VertexManipulation1) {
   
   // Test Add_Vertex & Get_NumOfVertices
-  graph->Add_Vertex(30);
-  graph->Add_Vertex(20);
-  graph->Add_Vertex(45);
+  graph->Add_Vertex(30, false, 0);
+  graph->Add_Vertex(20, false, 0);
+  graph->Add_Vertex(45, false, 0);
   EXPECT_EQ(graph->Get_NumOfVertices(), 3);
 
   // Test Get_Vertex
@@ -50,13 +50,13 @@ TEST_F(GraphTest, VertexManipulation1) {
  * **/
 TEST_F(GraphTest, ConnectionsTest) {
   
-  graph->Add_Vertex(30);
-  graph->Add_Vertex(20);
-  graph->Add_Vertex(45);
+  graph->Add_Vertex(30, false, 0);
+  graph->Add_Vertex(20, false, 0);
+  graph->Add_Vertex(45, false, 0);
 
-  graph->Make_Connection(0, 2, 50);
-  std::list<Edge<int>> edges = graph->Get_AdjacentVertices(0);
-  EXPECT_EQ(edges.front().AdjacentVertex_ID, 2);
+  graph->Connect_Vertices(0, 2, 50);
+  std::vector<Edge<int>> edges = graph->Get_AdjacentVertices(0);
+  EXPECT_EQ(edges.front().AdjacentVertexID, 2);
 }
 
 /**
@@ -65,13 +65,13 @@ TEST_F(GraphTest, ConnectionsTest) {
  * **/
 TEST_F(GraphTest, Connect_NewVertexTest) {
   
-  graph->Add_Vertex(30);
-  graph->Add_Vertex(20);
-  graph->Add_Vertex(45);
+  graph->Add_Vertex(30, false, 0);
+  graph->Add_Vertex(20, false, 0);
+  graph->Add_Vertex(45, false, 0);
 
-  graph->Connect_NewVertex(100, 1, 37);
-  std::list<Edge<int>> edges = graph->Get_AdjacentVertices(1);
-  EXPECT_EQ(edges.front().AdjacentVertex_ID, 3);
+  graph->Connect_Vertices(100, 1, 37);
+  std::vector<Edge<int>> edges = graph->Get_AdjacentVertices(1);
+  EXPECT_EQ(edges.front().AdjacentVertexID, 3);
 }
 
 /**
@@ -80,12 +80,12 @@ TEST_F(GraphTest, Connect_NewVertexTest) {
  * **/
 TEST_F(GraphTest, Print_VerticesTest) {
   
-  graph->Add_Vertex(30);
-  graph->Add_Vertex(20);
-  graph->Add_Vertex(45);
-  graph->Make_Connection(0, 2, 50);
-  graph->Make_Connection(0, 1, 50);
-  graph->Make_Connection(1, 2, 50);
+  graph->Add_Vertex(30, false, 0);
+  graph->Add_Vertex(20, false, 0);
+  graph->Add_Vertex(45, false, 0);
+  graph->Connect_Vertices(0, 2, 50);
+  graph->Connect_Vertices(0, 1, 50);
+  graph->Connect_Vertices(1, 2, 50);
 
   // Varsion 1
   testing::internal::CaptureStdout();
@@ -113,12 +113,12 @@ TEST_F(GraphTest, Print_VerticesTest) {
  * **/
 TEST_F(GraphTest, Print_EdgesTest) {
   
-  graph->Add_Vertex(30);
-  graph->Add_Vertex(20);
-  graph->Add_Vertex(45);
-  graph->Make_Connection(0, 2, 50);
-  graph->Make_Connection(0, 1, 50);
-  graph->Make_Connection(1, 2, 50);
+  graph->Add_Vertex(30, false, 0);
+  graph->Add_Vertex(20, false, 0);
+  graph->Add_Vertex(45, false, 0);
+  graph->Connect_Vertices(0, 2, 50);
+  graph->Connect_Vertices(0, 1, 50);
+  graph->Connect_Vertices(1, 2, 50);
 
   testing::internal::CaptureStdout();
   graph->Print_Edges();
@@ -131,12 +131,12 @@ TEST_F(GraphTest, Print_EdgesTest) {
  * **/
 TEST_F(GraphTest, DFSTest) {
 
-  graph->Add_Vertex(30);
-  graph->Add_Vertex(20);
-  graph->Add_Vertex(45);
-  graph->Make_Connection(0, 2, 50);
-  graph->Make_Connection(0, 1, 50);
-  graph->Make_Connection(1, 2, 50);
+  graph->Add_Vertex(30, false, 0);
+  graph->Add_Vertex(20, false, 0);
+  graph->Add_Vertex(45, false, 0);
+  graph->Connect_Vertices(0, 2, 50);
+  graph->Connect_Vertices(0, 1, 50);
+  graph->Connect_Vertices(1, 2, 50);
 
   Vertex<int, int> v_result = graph->DFS(45); 
   EXPECT_NE(v_result.Data, NULL);
@@ -149,12 +149,12 @@ TEST_F(GraphTest, DFSTest) {
  * **/
 TEST_F(GraphTest, BFSTest) {
 
-  graph->Add_Vertex(30);
-  graph->Add_Vertex(20);
-  graph->Add_Vertex(45);
-  graph->Make_Connection(0, 2, 50);
-  graph->Make_Connection(0, 1, 50);
-  graph->Make_Connection(1, 2, 50);
+  graph->Add_Vertex(30, false, 0);
+  graph->Add_Vertex(20, false, 0);
+  graph->Add_Vertex(45, false, 0);
+  graph->Connect_Vertices(0, 2, 50);
+  graph->Connect_Vertices(0, 1, 50);
+  graph->Connect_Vertices(1, 2, 50);
   
   Vertex<int, int> v_result = graph->BFS(45); 
   EXPECT_NE(v_result.Data, NULL);

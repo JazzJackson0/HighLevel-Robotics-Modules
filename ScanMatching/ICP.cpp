@@ -122,6 +122,29 @@ MatrixXf ICP::CalculateJacobian(VectorXf ReferencePoint, VectorXf NewPoint) {
 
 
 
+
+VectorXf ICP::Get_CenterOfMass(PointCloud p_cloud) {
+
+	float total_weight = 0.0;
+	VectorXf center_mass(PoseDimension);
+	for (int i = 0; i < PoseDimension; i++)
+		center_mass << 0;
+
+
+	for (int i = 0; i < p_cloud.Weights.size(); i++) {
+
+		total_weight += p_cloud.Weights[i];
+	}
+
+	for (int i = 0; i < p_cloud.Points.size(); i++) {
+
+		center_mass += (p_cloud.Points[i] * p_cloud.Weights[i]) / total_weight;
+	}
+
+	return center_mass;
+}
+
+
 ICP::ICP(int pose_dim) {
 	
 	PoseDimension = pose_dim;
@@ -134,7 +157,8 @@ ICP::ICP(int pose_dim) {
 
 
 
-void ICP::RunSVDAlign(PointCloud RefPointSet, PointCloud NewPointSet) {
+
+RotationTranslation ICP::RunSVDAlign(PointCloud RefPointSet, PointCloud NewPointSet) {
 	
 	PointCloud AlignedPoints = NewPointSet; // Probably need a deep copy (maybe something to copy the vectors inside)
 	VectorXf TrueCenterMass; // Initialize to 0
@@ -143,59 +167,105 @@ void ICP::RunSVDAlign(PointCloud RefPointSet, PointCloud NewPointSet) {
 	VectorXf b; 
 	MatrixXf H; // Initialize to 0
 	float TrueWeightSum = 0.0;
-	float EstWeightSum = 0.0;
 	int cloud_size;
+	RotationTranslation transformation;
+	transformation.weight = 0.0;
 
 	if (RefPointSet.Points.size() > NewPointSet.Points.size()) {
 		cloud_size = RefPointSet.Points.size();	
 	}
 	cloud_size = NewPointSet.Points.size();
 
-	// Calculate Centers of Mass
+	// Calculate Centers of Mass & Weight Sum
+	TrueCenterMass = Get_CenterOfMass(RefPointSet);
+	transformation.center_mass = Get_CenterOfMass(NewPointSet);
 	for (int i = 0; i < cloud_size; i++) {
-		// Check that i doesnt go over point cloud size.
-		TrueCenterMass += RefPointSet.Points[i]; // Multiply by Scalar
-		TrueWeightSum += RefPointSet.Weights[i]; // Divide Sum by this 
-		
-		EstimatedCenterMass += NewPointSet.Points[i]; // Multiply by Scalar
-		EstWeightSum += NewPointSet.Weights[i]; // Divide Sum by this 
+		TrueWeightSum += RefPointSet.Weights[i];
+		transformation.weight += NewPointSet.Weights[i];
 	}
 
 	// Calculate Cross-Covariance Matrix H
 	for (int i = 0; i < cloud_size; i++) {
 		
 		a = (RefPointSet.Points[i] - TrueCenterMass);
-		b = (NewPointSet.Points[i] - EstimatedCenterMass);
+		b = (NewPointSet.Points[i] - transformation.center_mass);
 		
 		H += a * b.transpose(); // Multiply by weight
 	}
 	
 	// Compute Rotation Matrix (SVD Calculation)
 	Eigen::JacobiSVD<MatrixXf> svd(H);
-	MatrixXf RotationM = svd.matrixV() * svd.matrixU().transpose();
+	transformation.rotation_matrix = svd.matrixV() * svd.matrixU().transpose();
 
 	// Compute Translation Vector
-	VectorXf TranslationV = TrueCenterMass - RotationM * EstimatedCenterMass;
+	transformation.translation_vector = TrueCenterMass - transformation.rotation_matrix * transformation.center_mass;
 
 	// Translate & Rotate Cloud
 	for (int i = 0; i < cloud_size; i++) {
 
-		AlignedPoints.Points[i] = (RotationM * NewPointSet.Points[i]) + TranslationV;
+		AlignedPoints.Points[i] = (transformation.rotation_matrix * NewPointSet.Points[i]) + transformation.translation_vector;
 		// Handle Weight Updates
 	}
+
+	return transformation;
 }
 
 
 
-void ICP::RunSVD(PointCloud NewPointCloud) {
-	
+RotationTranslation ICP::RunSVD(PointCloud RefPointCloud, PointCloud NewPointCloud) {
+
+	RotationTranslation transformation;
+	pair<PointCloud, PointCloud> point_sets = Calculate_Correspondences(RefPointCloud, NewPointCloud);
+	PointCloud TransformedPointCloud = point_sets.second;
+
+	// Create Error Vector
+	float prev_error_norm = 10000000000;
+	float error_norm = 10000000;
+	float error_thresh = 0.5; // Bullshit number
+
+	VectorXf prev_error(TransformedPointCloud.Points.size());
+	VectorXf error(TransformedPointCloud.Points.size());
+	for (int i = 0; i < TransformedPointCloud.Points.size() * PoseDimension; i++) {
+		prev_error << 10000000000;
+		error << 10000000;
+	}
+
+	while (error_norm < prev_error_norm && error_norm > error_thresh) {
+
+		transformation = RunSVDAlign(point_sets.first, TransformedPointCloud);
+
+		// Apply Alignment
+		for (int i = 0; i < TransformedPointCloud.Points.size(); i++)
+		TransformedPointCloud.Points[i] = (transformation.rotation_matrix * 
+			(point_sets.second.Points[i] - Get_CenterOfMass(point_sets.second))) + (Get_CenterOfMass(point_sets.first));
+
+			
+		// Recompute the Error Term (Just the difference between the newly rotated point set and the reference point set)
+		for (int i = 0; i < TransformedPointCloud.Points.size() * PoseDimension; i += 3) {
+
+			for (int j = 0; j < PoseDimension; j++) {
+
+				error(i + j) = (TransformedPointCloud.Points[i][j] - point_sets.first.Points[i][j]);
+			}
+		}
+		
+		// Calculate the New Error Norm 
+		prev_error_norm = error_norm;
+		for (int i = 0; i < TransformedPointCloud.Points.size() * PoseDimension; i++) {
+
+			error_norm += error(i) * error(i);
+		}
+		error_norm = sqrt(error_norm);
+	}	
+
+	return transformation;
 }
 
 
 
 void ICP::RunLeastSquares(VectorXf x, PointCloud RefPointCloud, PointCloud NewPointCloud) {
 	
-	pair<PointCloud, PointCloud>  point_sets = Calculate_Correspondences(RefPointCloud, NewPointCloud);
+	pair<PointCloud, PointCloud> point_sets = Calculate_Correspondences(RefPointCloud, NewPointCloud);
 	MatrixXf H_sum;
 	VectorXf b_sum;
 	VectorXf x_update = x;
@@ -220,10 +290,7 @@ void ICP::RunLeastSquares(VectorXf x, PointCloud RefPointCloud, PointCloud NewPo
 
 		// Update Parameters
 		point_sets.second = Update_PointCloud(point_sets.second, x_update);
-
-
 	}
-
 }
 
 
@@ -231,11 +298,10 @@ void ICP::RunLeastSquares(VectorXf x, PointCloud RefPointCloud, PointCloud NewPo
 /*
  * 			TO-DO
  * 			-----
- *  - Finish
- *
  *  - Test Code
  *  
- *  - 
+ *  - Need a function to set the weight values for each point in a PointCloud
+ *
  *  */
 
 

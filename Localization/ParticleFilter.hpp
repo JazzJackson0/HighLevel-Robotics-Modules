@@ -17,53 +17,32 @@ class ParticleFilter {
 
     private:
 		vector<Particle> ParticleSet;
-		float SearchDist;
-		float SearchWidth;
+		float MaxBeamDist;
+		float AngularBeamWidth;
 		int MaxParticles;
 		int PoseDimensions;
 		float TimeInterval;
-		float pose_std_dev = 1.0;
-		float weight_std_dev = 0.5;
+		float pose_sigma = 1.0; // Pose Standard Deviation
 		float range_coef; // How much range weight impacts total particle weight
+		float range_sigma = 1.0; // Standard Deviation for the Range
 		float bearing_coef; // How much bearing weight impacts total particle weight
+		float bearing_sigma = 0.5; // Standard Deviation for the Bearing
+		
+		// Map
+		float **Map;
 		int MapWidth;
 		int MapHeight;
         
-		
 
 		/**
-		 * @brief Searches a given distance and width around a given particle for feature points 
-		 * 			and creates an array of those points
+		 * @brief Look throuch each occupied cell in the map and determine if it falls within the range & bounds of the scanner.
+		 * 			 If so, add that cell to an array.
 		 * 
 		 * @param particle The particle around which feature points will be checked for.
 		 * 
 		 * @return ** Scan - Returns a vector of all the feature points picked up within range of the give particle
 		 */
 		vector<Scan> GetFeaturePoints(Particle particle);
-
-		
-		/**
-         * @brief Runs the particle generation and importance weighting.
-		 *
-		 * @param particle_set The set of Particles
-		 * @param motion_command The Odometry command (v, w)
-		 * @param scan Range Scan
-		 * @param odom The Odometry command (v, w)
-         * 
-         * @return ** vector<Particle> - Updated Particle Set
-         */
-        vector<Particle> RunParticleFilter(vector<Particle> particle_set, 
-			vector<vector<float>> scan, OdometryReadng odom);
-
-
-        /**
-         * @brief Uses the Low Variance Resampling Algorithm to resample the particles.
-		 *
-		 * @param particle_set The set of Particles
-         * 
-         * @return ** vector<Particle> Resampled Particle Set 
-         */
-        vector<Particle> Resample(vector<Particle> particle_set);
 
 
 		/**
@@ -79,6 +58,26 @@ class ParticleFilter {
 		 */
 		float ProbabilityDensityFunction(float robot_data, float particle_data, float std_dev);
 
+		
+		/**
+         * @brief Runs the particle generation and importance weighting.
+		 *
+		 * @param scan Robot Scan
+		 * @param odom The Odometry command (v, w)
+         * 
+         * @return ** void
+         */
+        void RunParticleFilter(vector<Scan> scan, OdometryReadng odom);
+
+
+        /**
+         * @brief Uses the Low Variance Resampling Algorithm to resample the particles.
+         * 
+         * @return ** void 
+         */
+        void Resample();
+
+
 
     public:
 
@@ -91,15 +90,25 @@ class ParticleFilter {
 		 * @param search_dist The distance from the particle to search for map features
 		 * @param search_width The Width of the range around the particle to search for map features
          */
-        ParticleFilter(int max_particles, int pose_dimensions, float time_interval, float search_dist, float search_width);
+        ParticleFilter(int max_particles, int pose_dimensions, float time_interval);
+
+		/**
+		 * @brief Add the map that the Particle Filter will localize the robot in.
+		 * 
+		 * @param map Map used to localize the robot in.
+		 * @param max_beam_dist The distance from the particle to search for map features
+		 * @param angular_beam_width The Width of the range around the particle to search for map features
+		 */
+		void AddMap(float ** map, float max_beam_dist, float angular_beam_width);
 
 
 		/**
-         * @brief Run the Particle Filter (Monte Carlo Localization) Algorithm.
-         * 
-         * @return ** void 
-         */
-		void RunMonteCarlo();
+		 * @brief Run the Particle Filter (Monte Carlo Localization) Algorithm.
+		 * 
+		 * @param scan 
+		 * @param odom 
+		 */
+		void RunMonteCarlo(vector<Scan> scan, OdometryReadng odom);
 };
 
 

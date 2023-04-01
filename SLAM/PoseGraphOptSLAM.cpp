@@ -1,13 +1,17 @@
 #include "PoseGraphOptSLAM.hpp"
 
-VectorXf PoseGraphOptSLAM::CreateStateVector(std::vector<VectorXf> poses) {
+VectorXf PoseGraphOptSLAM::CreateStateVector() {
 
 	VectorXf StateVector(MaxPoses);
-	for (int i = 0; i < poses.size(); i++) {
+	std::vector<Vertex<Pose, PoseEdge>> vertices = Pose_Graph.Get_Graph();
+
+	// Loop through pose vertices
+	for (int i = 0; i < vertices.size(); i++) {
 		
+		// Loop through pose dimensions
 		for (int j = 0; j < PoseDimensions; j++) {
 			
-			StateVector << poses[i][j];
+			StateVector << vertices[i].Data.pose[j];
 		}
 	}
 
@@ -65,7 +69,7 @@ void PoseGraphOptSLAM::BuildErrorFunction() {
 
 
 
-void PoseGraphOptSLAM::FrontEnd(PointCloud current_landmarks) {
+bool PoseGraphOptSLAM::FrontEnd(PointCloud current_landmarks) {
 	
 	Pose pose;
 	PoseEdge edge;
@@ -74,37 +78,106 @@ void PoseGraphOptSLAM::FrontEnd(PointCloud current_landmarks) {
 	// Check for level of overlap between landmark set of current & previous pose
 
 	// Add Pose & Edge to Graph if overlap is insignificant
-	
+	if () {
+
+		MatrixXf R;
+		VectorXf t;
 
 		ICP icp(PoseDimensions);
 		icp.RunSVD(current_landmarks);
+		
+		// Turn R & t to a Transformation Matrix
+		for (int i = 1; i <= R.cols() + 1; i++) {
 
-		// Turn R & t to a Transformation Matrix!!!!!!!!!!!!!!!!!!!!
-		//pose.TransformationMatrix = ;
+			if (i <= R.cols())
+				pose.TransformationMatrix.col(i) = R.col(1);
+			else 
+				pose.TransformationMatrix.col(i) = t;
+		}
 
+		// Add Pose to Graph
+		bool connected = true;
+		int v1 = -1;
 		if (Pose_Graph.Get_NumOfVertices() == 0)
-			PreviousPose = Pose_Graph.Add_Vertex(pose);
+			connected = false;
 		
 		else {
+
 			// Get Relative Transformation between 2 poses
 			edge.TransformationMatrix = pose.TransformationMatrix * PreviousPose.Data.TransformationMatrix;
-			//edge.NoiseInfoMatrix = ; Calculate Noise Matrix??
-			PreviousPose = Pose_Graph.AutoConnect_NewVertex(pose, edge);
+			int v1 = PreviousPose.VertexID;
+			AllEdges.push_back(edge);
+		}
+			
+
+		//edge.NoiseInfoMatrix = ; Calculate Noise Matrix??
+		PreviousPose = Pose_Graph.Add_Vertex(pose, connected, edge);
+		
+		if (v1 >= 0) {
+			int v2 = PreviousPose.VertexID;
+			edge.PoseIndices = std::make_pair(v1, v2);
 		}
 
 		// Search Graph in given radius to find possible loop closure (Excluding the n most recently added poses)
+		std::vector<Vertex<Pose, PoseEdge>> closure_candidates;
+		std::vector<Vertex<Pose, PoseEdge>> vertices = Pose_Graph.Get_Graph();
+		
+		// No Loop Closure Happening
+		if (vertices.size() <= NRecentPoses) {
+			
+			return false; 
+		}
+
+		// Loop Closure Process Start-------------------------------------------------------------------------------
+		for (int i = 0; i < vertices.size() - NRecentPoses; i++) {
+
+			// Calculate Distance
+			if (sqrt(((vertices[i].Data.pose[0] - PreviousPose.Data.pose[0]) * 
+				(vertices[i].Data.pose[0] - PreviousPose.Data.pose[0])) + 
+				((vertices[i].Data.pose[1] - PreviousPose.Data.pose[1]) * 
+				(vertices[i].Data.pose[1] - PreviousPose.Data.pose[1]))) 
+				< ClosureDistance) {
+
+				closure_candidates.push_back(vertices[i]);
+			}
+		}
 
 		// Connect to the Closest out of those that are found in the radius.
+		double closest = 1000000000000;
+		int closest_vertex_idx = -1;
+		for (int i = 0; i < closure_candidates.size(); i++) {
 
-		// If Loop Closure is made: Send off for Optimization
+			if (sqrt(((closure_candidates[i].Data.pose[0] - PreviousPose.Data.pose[0]) * 
+				(closure_candidates[i].Data.pose[0] - PreviousPose.Data.pose[0])) + 
+				((closure_candidates[i].Data.pose[1] - PreviousPose.Data.pose[1]) * 
+				(closure_candidates[i].Data.pose[1] - PreviousPose.Data.pose[1]))) 
+				< closest) {
+					
+					closest_vertex_idx = closure_candidates[i].VertexID;
+			}
+		}
 
+		// Loop Closure
+		if (closest_vertex_idx >= 0) {
+
+			PoseEdge closure_edge;
+			closure_edge.TransformationMatrix = pose.TransformationMatrix * 
+				Pose_Graph.Get_Vertex(closest_vertex_idx).TransformationMatrix;
+			Pose_Graph.Connect_Vertices(Pose_Graph.Get_NumOfVertices(), closest_vertex_idx, closure_edge);
+			AllEdges.push_back(closure_edge);
+			return true;
+		}
+
+		else 
+			return false;
+	}
 } 
 
 
 
-VectorXf PoseGraphOptSLAM::Optimize(std::vector<VectorXf> Poses, std::vector<PoseEdge> Edges, OdometryReadng odom) {
+void PoseGraphOptSLAM::Optimize(OdometryReadng odom) {
 
-	VectorXf StateVector = CreateStateVector(Poses);
+	VectorXf StateVector = CreateStateVector();
 	VectorXf StateVectorUpdate;
 	StateVectorUpdate = VectorXf::Ones(MaxPoses);
 	pair<Eigen::SparseMatrix<float, Eigen::RowMajor>, VectorXf> total_result;
@@ -115,14 +188,12 @@ VectorXf PoseGraphOptSLAM::Optimize(std::vector<VectorXf> Poses, std::vector<Pos
 	// While Nodes Not Converged
 	while (StateVectorUpdate[0] > min_convergence_thresh) {
 
+		for (int n = 0; n < AllEdges.size(); n++) { // Calculate & Sum H and b over every edge.
 
-		// FIGURE OUT THE BEST WAY TO DO THIS!!
-		for (int n = 0; n < Edges.size(); n++) { // Calculate & Sum H and b over every edge.
-
-			VectorXf pose_i = Poses[Edges[n].PoseIndices.first];
-			VectorXf pose_j = Poses[Edges[n].PoseIndices.second];
-			VectorXf translated_vector = Edges[n].TransformationMatrix * pose_i;
-			MatrixXf edge_covariance = Edges[n].NoiseInfoMatrix;
+			VectorXf pose_i = Pose_Graph.Get_Vertex(AllEdges[n].PoseIndices.first).pose;
+			VectorXf pose_j = Pose_Graph.Get_Vertex(AllEdges[n].PoseIndices.second).pose;
+			VectorXf translated_vector = AllEdges[n].TransformationMatrix * pose_i;
+			MatrixXf edge_covariance = AllEdges[n].NoiseInfoMatrix;
 			
 			// Build Linear System
 			temp_result = BuildLinearSystem(pose_i, pose_j, translated_vector, edge_covariance, odom);
@@ -142,7 +213,7 @@ VectorXf PoseGraphOptSLAM::Optimize(std::vector<VectorXf> Poses, std::vector<Pos
 
 	}
 
-	return StateVector;
+	// UPDATE THE ACTUAL POSE GRAPH WITH STATES FROM THE STATE VECTOR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 }
 
 
@@ -221,14 +292,14 @@ pair<Eigen::SparseMatrix<float, Eigen::RowMajor>, VectorXf> PoseGraphOptSLAM::Bu
 }
 
 
-
 PoseGraphOptSLAM::PoseGraphOptSLAM(int max_nodes, int pose_dimension, int independent_val_num,
 					int guess_variation) {
 	
 	MaxPoses = max_nodes;
 	PoseDimensions = pose_dimension;
-	PreviousPose.setZero(pose_dimension);
+	PreviousPose.Data.pose.setZero(pose_dimension);
 	VariationAroundGuess = guess_variation;
+	NRecentPoses = 5;
 
 	std::vector<AD<float>> xs(PoseDimensions);
 	std::vector<AD<float>> ys(PoseDimensions);  // Are these Dimensions Correct???????? NO THEY ARE NOT!!!
@@ -237,9 +308,20 @@ PoseGraphOptSLAM::PoseGraphOptSLAM(int max_nodes, int pose_dimension, int indepe
 }
 
 
+void PoseGraphOptSLAM::FrontEndInit(int n_recent_poses, float closure_distance) {
 
-void PoseGraphOptSLAM::Run() {
+	NRecentPoses = n_recent_poses;
+	ClosureDistance = closure_distance;
+}
+
+
+
+void PoseGraphOptSLAM::Run(PointCloud current_landmarks, OdometryReadng odom) {
 	
+	if (FrontEnd(current_landmarks)) {
+
+		Optimize(odom);
+	}
 }
 
 
@@ -247,8 +329,7 @@ void PoseGraphOptSLAM::Run() {
  * 			TO-DO
  * 			-----
  *  - Finish
- *
- *  - Figure out how to loop over edges in Optimize function
- *  
+ *   
  *  - Test Code
+ * 
  *  */

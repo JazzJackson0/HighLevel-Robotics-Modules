@@ -287,16 +287,18 @@ struct slope_intercept_form {
 
 struct landmark {
 
-    int landmark_id;
-    Point landmark_position;
-    vector<Point> landmark_points;
-    GeneralFormLine landmark_line;
+    int id;
+    Point position;
+    float range; // Range from robot
+    float bearing; // Bearing relative to robot
+    vector<Point> points;
+    GeneralFormLine line;
 };
 
 struct line_segment {
 
     GeneralFormLine line_fit;
-    vector<Point> line_points;
+    vector<Point> points;
     int start_idx;
     int end_idx;
     vector<Point> endpoints;

@@ -50,6 +50,11 @@ class PoseGraphOptSLAM {
 	int VariationAroundGuess;
 	float min_convergence_thresh;
 	Graph<Pose, PoseEdge> Pose_Graph;
+	std::vector<PoseEdge> AllEdges;
+
+	// Used in Front End
+	int NRecentPoses; 
+	float ClosureDistance;
 	
 	private:
 
@@ -66,10 +71,9 @@ class PoseGraphOptSLAM {
 		/**
 		 * @brief Create a single State Vector from the Graph Nodes
 		 * 
-		 * @param poses The Graph Nodes
 		 * @return ** VectorXf 
 		 */
-		VectorXf CreateStateVector(std::vector<VectorXf> poses);
+		VectorXf CreateStateVector();
 
 
 		/**
@@ -105,9 +109,9 @@ class PoseGraphOptSLAM {
 		 * 
 		 * @param current_landmarks Current Landmarks picked up by the most resent scan
          * 
-         * @return ** vector<VectorXf> - Holds all of the nodes (pose vectors)in the graph.
+         * @return ** bool - True if new loop closure made.
          */
-		void FrontEnd(PointCloud current_landmarks);
+		bool FrontEnd(PointCloud current_landmarks);
 
 
 
@@ -115,14 +119,11 @@ class PoseGraphOptSLAM {
          * @brief The Back End: Uses the Edges/Constraints from the Front End to optimize
          *          the graph and return the corrected poses.
          * 
-         * @param Poses The vector of poses to be optimized. 
-		 * 						(Corresponds to the Vertices of the Graph G{V})
-		 * @param Edges The Graph Edges G{E}
 		 * @param odom Odometry reading (translation velocity & rotation velocity) 
 		 * 
-         * @return ** VectorXf Updated State Vector 
+         * @return ** void
          */
-		VectorXf Optimize(std::vector<VectorXf> Poses, std::vector<PoseEdge> Edges, OdometryReadng odom);
+		void Optimize(OdometryReadng odom);
 
 
         /**
@@ -157,18 +158,27 @@ class PoseGraphOptSLAM {
         PoseGraphOptSLAM(int max_nodes, int pose_dimension, int independent_val_num, int guess_variation);
 
 
+		/**
+		 * @brief 
+		 * 
+		 * @param n_recent_poses 
+		 * @param closure_distance 
+		 */
+		void FrontEndInit(int n_recent_poses, float closure_distance);
+
+
         /**
          * @brief Run the Pose Graph Optimization SLAM Algorithm.
          * 
-         * @return ** void 
+         * @param current_landmarks 
+         * @param odom 
          */
-        void Run();
+        void Run(PointCloud current_landmarks, OdometryReadng odom);
 
 
 };
 
 struct pose {
-
 	//int Index; // Pose's Graph Index
 	MatrixXf TransformationMatrix; // Global Transformation Matrix. (w/ Current Position & Orientation)
 	VectorXf pose;
@@ -176,7 +186,7 @@ struct pose {
 };
 
 struct pose_edge {
-    //pair<int, int> PoseIndices; // Graph Indices of the 2 Poses
+    pair<int, int> PoseIndices; // Graph Indices of the 2 Poses
 	MatrixXf TransformationMatrix; // Transformation Matrix.
     MatrixXf NoiseInfoMatrix; // Encodes the uncertainty in the transformation to the Pose.
 };

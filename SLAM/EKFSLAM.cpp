@@ -16,16 +16,17 @@ VectorXf EKFSlam::UpdatePose(VectorXf MeasuredPose, OdometryReadng odom) {
 
 
 VectorXf EKFSlam::GetEstimatedScan(VectorXf robot_pose_est, 
-	VectorXf landmark_position_est) {
+	Point landmark_position_est) {
 
 	VectorXf UpdatedObservation(LandmarkDimensions);
 	VectorXf Range(LandmarkDimensions);
-	for (int i = 0; i < LandmarkDimensions; i++) {
-		Range << landmark_position_est[i] - robot_pose_est[i];
-	}
+	
+	Range << landmark_position_est.x - robot_pose_est[0];
+	Range << landmark_position_est.y - robot_pose_est[1];
+
+	// Calculate distance and angle between estimate and robot pose
 	float SquaredDistance = (float) Range.dot(Range.transpose());
 	float EuclideanDistance = std::sqrt(SquaredDistance);
-	
 	float orientation = atan2(Range[1], Range[0]) - robot_pose_est[2];
 
 	UpdatedObservation << EuclideanDistance, orientation;
@@ -89,64 +90,6 @@ void EKFSlam::BuildObservationFunctionFor_H() {
 		// Performs the derivative calculations on the empty x variables.
 	UpdateFunction = CppAD::ADFun<float>(Xh, Yh);
 }	
-
-
-
-void EKFSlam::Prediction(VectorXf current_pose, OdometryReadng odom) {
-	
-	// STEP 1: Update the State Vector. -----------------
-	VectorXf updated_pose = UpdatePose(current_pose, odom);
-		// Map updated pose to entire state vector
-	StateVector = StateVector + UpdateMappingFunction.transpose() * updated_pose;
-
-	// STEP 2: Update Covariance Matrix -----------------
-		
-		// Take Jacobian of your Motion Model g()
-		Eigen::MatrixXf G = CalculateJacobian(UPDATE, odom);
-
-		// Update the Covariance
-		UpdateCovariance = G * UpdateCovariance * G.transpose() + MotionCovariance;
-}
-
-
-
-void EKFSlam::Correction(VectorXf current_scan, OdometryReadng odom) {
-	
-	VectorXf current_pose = GetPoseFromStateVector();
-	VectorXf landmark_correspondence; // Populate this with landmark data from Correspondendce Matrix.
-	
-	// For all OBSERVED Features (So it wont be NumOfLandmarks)
-	for (int i = 0; i < NumOfLandmarks; i++) {
-
-		if (1/*Given Landmark == 0*/) { // FINISH!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
-
-			VectorXf new_landmark_j;
-			new_landmark_j[0] = current_pose[0] + (current_scan[0] * cos(current_scan[1] * current_pose[2]));
-			new_landmark_j[1] = current_pose[1] + (current_scan[0] * sin(current_scan[1] * current_pose[2]));
-			landmark_correspondence = new_landmark_j;
-			// Add New Landmark to Correspondence Matrix
-		}
-
-		// STEP 1: Take the observation function h() which computes the expected observation.  -----------------
-
-			// Input current Landmark from Correspondence Matrix that can be seen by robot.
-		VectorXf estimated_scan = GetEstimatedScan(current_pose, landmark_correspondence);
-
-		// STEP 2: Compute Jacobian of Observation function h() - H -----------------
-		Eigen::MatrixXf H = CalculateJacobian(OBSERVATION, odom);
-			// Map the low dimensional Jacobian back to Higher dim F
-		HighDimension_H = H * ObservationMappingFunction;
-
-		// STEP 3: Compute the Kalman Gain -----------------
-		Eigen::MatrixXf KalmanSegment = (H * UpdateCovariance * H.transpose()) + ObservationCovariance;
-		KalmanGain = UpdateCovariance * H.transpose() * KalmanSegment.inverse(); 
-
-		// STEP 4: Compute updated state & covariance -----------------
-		StateVector = StateVector + KalmanGain * (current_scan - estimated_scan);
-		UpdateCovariance = (Identity - (KalmanGain * H)) * UpdateCovariance;
-	}
-	
-}
 
 
 
@@ -231,6 +174,7 @@ void EKFSlam::BuildUpdateCovarianceAndStateVector(std::vector<VectorXf> landmark
 	StateVector = state_vec.transpose();
 }
 
+
 VectorXf EKFSlam::GetPoseFromStateVector() {
 
 	VectorXf currentPose;
@@ -240,6 +184,71 @@ VectorXf EKFSlam::GetPoseFromStateVector() {
 	}
 
 	return currentPose;
+}
+
+
+
+void EKFSlam::Prediction(VectorXf current_pose, OdometryReadng odom) {
+	
+	// STEP 1: Update the State Vector. -----------------
+	VectorXf updated_pose = UpdatePose(current_pose, odom);
+		// Map updated pose to entire state vector
+	StateVector = StateVector + UpdateMappingFunction.transpose() * updated_pose;
+
+	// STEP 2: Update Covariance Matrix -----------------
+		
+		// Take Jacobian of your Motion Model g()
+		Eigen::MatrixXf G = CalculateJacobian(UPDATE, odom);
+
+		// Update the Covariance
+		UpdateCovariance = G * UpdateCovariance * G.transpose() + MotionCovariance;
+}
+
+
+
+void EKFSlam::Correction(std::vector<Landmark> landmarks, OdometryReadng odom) {
+	
+	VectorXf current_pose = GetPoseFromStateVector();
+	Landmark landmark_correspondence; // Populate this with landmark data from Correspondendce Matrix.
+	
+	// For all currently Obseerved Landmarks
+	for (int i = 0; i < landmarks.size(); i++) {
+
+		Landmark j = Correspondence[landmarks[i].id];
+		if (j == NULL) { 
+
+			Landmark new_landmark_j;
+			//new_landmark_j.position.x = current_pose[0] + (landmarks[i].range * cos(landmarks[i].bearing * current_pose[2]));
+			//new_landmark_j.position.y = current_pose[1] + (landmarks[i].range * sin(landmarks[i].bearing * current_pose[2]));
+			new_landmark_j.position = landmarks[i].position;
+
+			// Add New Landmark to Correspondence Matrix
+			Correspondence[landmarks[i].id] = new_landmark_j;
+			landmark_correspondence = new_landmark_j;
+		}
+
+		// STEP 1: Take the observation function h() which computes the expected observation.  -----------------
+
+			// Input current Landmark from Correspondence Matrix that can be seen by robot.
+		VectorXf estimated_scan = GetEstimatedScan(current_pose, landmark_correspondence.position);
+
+		// STEP 2: Compute Jacobian of Observation function h() - H -----------------
+		Eigen::MatrixXf H = CalculateJacobian(OBSERVATION, odom);
+			// Map the low dimensional Jacobian back to Higher dim F
+		HighDimension_H = H * ObservationMappingFunction;
+
+		// STEP 3: Compute the Kalman Gain -----------------
+		Eigen::MatrixXf KalmanSegment = (H * UpdateCovariance * H.transpose()) + ObservationCovariance;
+		KalmanGain = UpdateCovariance * H.transpose() * KalmanSegment.inverse(); 
+
+		// STEP 4: Compute updated state & covariance -----------------
+		VectorXf current_scan;
+		current_scan << landmark_correspondence.range, landmark_correspondence.bearing; 
+
+		StateVector = StateVector + KalmanGain * (current_scan - estimated_scan);
+		UpdateCovariance = (Identity - (KalmanGain * H)) * UpdateCovariance;
+	}
+	
 }
 
 
@@ -285,8 +294,13 @@ EKFSlam::EKFSlam(Eigen::VectorXf initial_position, std::vector<VectorXf> map,
 
 
 
-void EKFSlam::Run() {
+void EKFSlam::Run(std::vector<VectorXf> current_scan, VectorXf current_pose, OdometryReadng odom) {
 	
+	FeatureExtractor feature_extractor(0.5, 0.5, 4); // Random Garbage Values
+	std::vector<Landmark> landmarks = feature_extractor.LandmarksFromScan(current_scan);
+
+	Prediction(current_pose, odom);
+	Correction(landmarks, odom);
 }
 
 
@@ -296,7 +310,6 @@ void EKFSlam::Run() {
 /*
  * 			TO-DO
  * 			-----
- *  - Finish (Correction Function)
  *
  *  - Test Code
  *  
