@@ -32,7 +32,7 @@ int Graph<T, Z>::Get_NumOfVertices() {
     return G.size();
 }
 
-
+template <typename T, typename Z>
 int Graph<T, Z>::Get_NumOfEdges() {
 
     return NumOfEdges;
@@ -78,7 +78,7 @@ Vertex<T, Z> Graph<T, Z>::Add_Vertex(T data, bool connected, Z weight) {
 
     if (connected) {
 
-        Connect_Vertices(RecentVertexID, new_vertex.VertexID, weight);
+        Add_Edge(RecentVertexID, new_vertex.VertexID, weight);
     }
 
     RecentVertexID = G.size();
@@ -87,7 +87,7 @@ Vertex<T, Z> Graph<T, Z>::Add_Vertex(T data, bool connected, Z weight) {
 
 
 template <typename T, typename Z>
-void Graph<T, Z>::Connect_Vertices(int vertex1_ID, int vertex2_ID, Z weight) {
+void Graph<T, Z>::Add_Edge(int vertex1_ID, int vertex2_ID, Z weight) {
 
     if ((vertex1_ID < 0 || vertex1_ID > G.size()) || (vertex2_ID < 0 || vertex2_ID > G.size())) {
 
@@ -114,9 +114,9 @@ void Graph<T, Z>::Connect_Vertices(int vertex1_ID, int vertex2_ID, Z weight) {
 
 
 template <typename T, typename Z>
-void Graph<T, Z>::Disconnect_Vertices(int index1, int index2) {
+void Graph<T, Z>::Remove_Edge(int index1, int index2) {
 
-    if ((vertex1_ID < 0 || vertex1_ID > G.size()) || (vertex2_ID < 0 || vertex2_ID > G.size())) {
+    if ((index1 < 0 || index1 > G.size()) || (index2 < 0 || index2 > G.size())) {
 
         std::cerr << "Invalid Index" << std::endl;
         return;
@@ -154,49 +154,111 @@ void Graph<T, Z>::Disconnect_Vertices(int index1, int index2) {
 }
 
 
+
 template <typename T, typename Z>
-Vertex<T, Z> Graph<T, Z>::DFS(T target_data, int current_vertex, vector<Vertex<T, Z>> visited_stack) {
+void Graph<T, Z>::Update_Data(int vertex_id, T data) {
 
-    // Implement Code
-    Vertex<T, Z> starting_vertex;
-    //vector<Vertex<T, Z>> VisitedStack;
-
-    if (G[i].Data == target_data) {
-
-        return G[i];
-    }
-
-    visited_stack.push_back(G[current_vertex]);
-    DFS(target_data, G[current_vertex].Adjacents[G[current_vertex].adjacents_pointer], visited_stack);
-
-    
-
-    for (int i = 0; i < G.size(); i++) {
-
-        
-
-
-        if (G[i].Adjacents[G[i].adjacents_pointer] == target_data) {
-
-            return G[i];
-        }
-
-        G[i].adjacents_pointer++;
-        vector<Edge<Z>> adjacents = Get_AdjacentVertices(G[i].VertexID);
-        visited_stack.push_back(G[i].Adjacents[G[i].adjacents_pointer]);
-
-
+    if (vertex_id < 0 || vertex_id >= G.size()) {
+        std::cout << "This Index doesn't exist." << std::endl;
+        return;
     }
     
-    return NULL;
+    G[vertex_id].Data = data;
 }
 
 
 template <typename T, typename Z>
-Vertex<T, Z> Graph<T, Z>::BFS(T target_data) {
+Vertex<T, Z> Graph<T, Z>::DFS(T target_data, int current_vertex, vector<int> visited) {
 
-    // Implement Code
-    vector<Vertex<T, Z>> VisitedQueue;
+    if (current_vertex < 0 || current_vertex > G.size()){
+        std::cerr << "Invalid Vertex ID" << std::endl;
+        return NULL;
+    }
+    
+    if (G[current_vertex].Data == target_data)
+        return G[current_vertex];
+
+
+    // Add vertex to visited list
+    visited.push_back(current_vertex);
+
+    // Loop through each adjacent vertex
+    bool been_visited = false;
+    for (int i = 0; i < G[current_vertex].Adjacents.size(); i++) {
+
+        // Check if the adjacent has been visited.
+        for (int j = 0; j < visited.size(); j++) {
+
+            if (G[current_vertex].Adjacents[i].AdjacentVertexID == visited[j])
+                been_visited = true;
+        }
+
+        // If not visited, continue depth search into adjacent
+        if (!been_visited) {    
+            been_visited = false;
+            DFS(target_data, G[current_vertex].Adjacents[i].AdjacentVertexID, visited);
+        }
+    }
+
+    // Can't go deeper
+    if (visited == G.size())
+        return NULL;     
+}
+
+
+template <typename T, typename Z>
+Vertex<T, Z> Graph<T, Z>::BFS(T target_data, int current_vertex) {
+
+    if (current_vertex < 0 || current_vertex > G.size()){
+        std::cerr << "Invalid Vertex ID" << std::endl;
+        return NULL;
+    }
+    
+    if (G[current_vertex].Data == target_data)
+        return G[current_vertex];
+
+    vector<int> visited;
+    std::queue<int> task_queue;
+    // Enqueue first vertex to task queue and mark as visited
+    visited.push_back(current_vertex);
+    task_queue.push(current_vertex);
+
+    // Perform search task on each vertex in queue
+    while (task_queue.size() > 0) {
+
+        // Dequeue vertex
+        int vertex = task_queue.pop();
+
+        // Loop through dequeued vertex's adjacent vertices
+        bool been_visited = false;
+        for (int i = 0; i < G[current_vertex].Adjacents.size(); i++) {
+
+            // Check if the adjacent has been visited.
+            for (int j = 0; j < visited.size(); j++) {
+
+                if (G[current_vertex].Adjacents[i].AdjacentVertexID == visited[j])
+                    been_visited = true;
+            }
+
+            // If not visited, mark it as visited and enqueue it
+            if (!been_visited) {    
+                been_visited = false;
+                int adjacent_id = G[current_vertex].Adjacents[i].AdjacentVertexID;
+                
+                // Return the adjacent vertex if data found
+                if (G[adjacent_id].Data == target_data)
+                    return G[adjacent_id];
+
+                // Enqueue adjacent vertex to search task queue & mark as visited.
+                else {
+                    visited.push_back(adjacent_id);
+                    task_queue.push(adjacent_id);
+                }
+                
+            }
+        }
+    }
+
     return NULL;
 }
 

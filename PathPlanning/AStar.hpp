@@ -165,7 +165,7 @@ class A_Star {
          * 
          * @param startCell Starting coordinates
          * @param goalCell Goal coordinates
-         * @return ** void 
+         * @return ** bool Returns true if goal has reached, else false 
          */
         bool Search(CellCoordinate startCell, CellCoordinate goalCell);
 

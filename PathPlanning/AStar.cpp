@@ -174,21 +174,22 @@ bool A_Star::Search(CellCoordinate startCell, CellCoordinate goalCell) {
     /*-----------------------Make Initial Checks-----------------------*/
     if (!isValid(startCell.first, startCell.second)) {
         cout << "Invalid Starting Coordinates." << endl;
-        return;
+        return false;
     }
 
     if (!isValid(goalCell.first, goalCell.second)) {
         cout << "Invalid Goal Coordinates." << endl;
-        return;
+        return false;
     }
 
     if (isBlocked(startCell.first, startCell.second)) {
         cout << "Start Coodrdinates Blocked." << endl;
-        return;
+        return false;
     }
 
     if (GoalReached(startCell.first, startCell.second, goalCell)) {
         cout << "Ummm... You're already there..." << endl;
+        return true;
     }
 
     /*-----------------------Initial Set-Up-----------------------*/
@@ -264,7 +265,7 @@ bool A_Star::Search(CellCoordinate startCell, CellCoordinate goalCell) {
                     cout << "You've reached the goal!" << endl;
                     PathTrace(CellsViewed, goalCell);
                     goalReached = true;
-                    return;
+                    return goalReached;
                 }
 
                 // If Cell has not been Visited, and is not Blocked

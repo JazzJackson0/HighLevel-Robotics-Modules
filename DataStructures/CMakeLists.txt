@@ -4,8 +4,7 @@ project(DataStructures)
 
 # Set Variables
 set(TARGET_A graphTest)
-set(SOURCES_A Graph.cpp Graph.hpp)
-
+set(SOURCES_A GraphTest.cpp)
 
 #Set-up Google Test
 set(CMAKE_CXX_STANDARD 14)
@@ -19,8 +18,8 @@ FetchContent_MakeAvailable(googletest)
 
 
 # Create Executables & Link Dependencies
-add_executable(${TARGET_A} GraphTest.cpp  ${SOURCES_A})
+add_executable(${TARGET_A} ${SOURCES_A})
 target_link_libraries(${TARGET_A} PUBLIC gtest_main) # Link Libraries to Executable
 
 # Tell CMake the Target is a Unit Test
-#add_test(NAME ${TARGET_A} COMMAND ${TARGET_A})
+add_test(NAME ${TARGET_A} COMMAND ${TARGET_A})

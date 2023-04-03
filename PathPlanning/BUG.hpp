@@ -7,11 +7,20 @@ using std::pair;
 using std::make_pair;
 using std::vector;
 
-typedef struct pose Pose;
-typedef struct dist_sensor_data DistSensorData;
 typedef enum { FORWARD, LEFT, RIGHT, STOP } Directions;
 typedef enum { BUG0, BUG1, BUG2, TAN } BugType;
 typedef pair<int, int> CellCoordinate;
+
+struct Pose {
+	CellCoordinate position;
+	float orientation;
+};
+
+struct DistSensorData {
+	float front_dist;
+	float right_dist;
+	float left_dist;	
+};
 
 
 class Bug {
@@ -236,16 +245,4 @@ class Bug {
 
 };
 
-
-
-struct pose {
-	CellCoordinate position;
-	float orientation;
-};
-
-struct dist_sensor_data {
-	float front_dist;
-	float right_dist;
-	float left_dist;	
-};
 

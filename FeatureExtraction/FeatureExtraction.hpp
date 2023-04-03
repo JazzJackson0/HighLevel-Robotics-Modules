@@ -10,11 +10,44 @@ using std::pair;
 using std::vector;
 using namespace::Eigen;
 
-typedef struct _point Point;
-typedef struct general_form GeneralFormLine;
-typedef struct slope_intercept_form SlopeInterceptLine;
-typedef struct landmark Landmark;
-typedef struct line_segment LineSegment;
+struct Point {
+
+    float x;
+    float y;
+    float angle;
+};
+
+struct GeneralFormLine {
+
+    double a;
+    double b;
+    double c;
+};
+
+struct SlopeInterceptLine{
+
+    double m;
+    double b;
+};
+
+struct Landmark {
+
+    int id;
+    Point position;
+    float range; // Range from robot
+    float bearing; // Bearing relative to robot
+    vector<Point> points;
+    GeneralFormLine line;
+};
+
+struct LineSegment {
+
+    GeneralFormLine line_fit;
+    vector<Point> points;
+    int start_idx;
+    int end_idx;
+    vector<Point> endpoints;
+};
 
 
 class FeatureExtractor {
@@ -265,41 +298,3 @@ class FeatureExtractor {
 };
 
 
-struct _point {
-
-    float x;
-    float y;
-    float angle;
-};
-
-struct general_form {
-
-    double a;
-    double b;
-    double c;
-};
-
-struct slope_intercept_form {
-
-    double m;
-    double b;
-};
-
-struct landmark {
-
-    int id;
-    Point position;
-    float range; // Range from robot
-    float bearing; // Bearing relative to robot
-    vector<Point> points;
-    GeneralFormLine line;
-};
-
-struct line_segment {
-
-    GeneralFormLine line_fit;
-    vector<Point> points;
-    int start_idx;
-    int end_idx;
-    vector<Point> endpoints;
-};

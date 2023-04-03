@@ -1,3 +1,4 @@
+#include <iostream>
 #include <gtest/gtest.h>
 #include "PoseGraphOptSLAM.hpp"
 
@@ -27,7 +28,13 @@ class PoseGraphOptSLAMTest : public ::testing::Test {
  * **/
 TEST_F(PoseGraphOptSLAMTest, Run1) {
 
-	pose_graph->Run();
+	PointCloud current_landmarks;
+	OdometryReadng odom;
+	int n_recent_poses = 5;
+	float closure_distance = 1.0;
+	
+	pose_graph->FrontEndInit(n_recent_poses, closure_distance);
+	pose_graph->Run(current_landmarks, odom);
 }
 
 

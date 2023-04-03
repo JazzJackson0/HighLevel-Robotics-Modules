@@ -9,9 +9,21 @@ using std::vector;
 using std::pair;
 using std::make_pair;
 
-typedef struct particle Particle;
-typedef struct odometry_reading OdometryReadng;
-typedef struct scan Scan;
+struct Particle {
+	vector<float> Pose;
+	float weight;
+};
+
+struct OdometryReadng {
+	float RobotTranslation; 
+	float RobotRotation;
+};
+
+struct Scan {
+	float range;
+	float bearing;
+};
+
 
 class ParticleFilter {
 
@@ -113,18 +125,5 @@ class ParticleFilter {
 
 
 
-struct particle {
-	vector<float> Pose;
-	float weight;
-};
 
-struct odometry_reading {
-	float RobotTranslation; 
-	float RobotRotation;
-};
-
-struct scan {
-	float range;
-	float bearing;
-};
 

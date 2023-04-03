@@ -13,16 +13,16 @@ using namespace::CppAD;
 using namespace::Eigen;
 using std::vector;
 
-struct odometry_reading {
+struct OdometryReadng {
 	float RobotTranslation; 
 	float RobotRotation;
 };
 
 enum f_type {UPDATE, OBSERVATION};
 
+// Why did I make these. What are they even from???????????????????????????????????????????????/
 typedef struct state_vec StateVec;
 typedef struct pose_plus PosePlus;
-typedef struct odometry_reading OdometryReadng;
 typedef enum f_type FunctionType;
 
 

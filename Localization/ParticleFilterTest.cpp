@@ -1,3 +1,4 @@
+#include <iostream>
 #include <gtest/gtest.h>
 #include "ParticleFilter.hpp"
 
@@ -28,6 +29,7 @@ class ParticleFilterTest : public ::testing::Test {
  * **/
 TEST_F(ParticleFilterTest, RunMonteCarlo1) {
 
-	pfilter->RunMonteCarlo();
-
+	vector<Scan> scan;
+	OdometryReadng odom;
+	pfilter->RunMonteCarlo(scan, odom);
 }

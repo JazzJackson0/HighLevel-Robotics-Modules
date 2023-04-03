@@ -2,11 +2,14 @@ cmake_minimum_required(VERSION 3.16.3)
 
 project(SLAM)
 
+include_directories(${CMAKE_SOURCE_DIR}/../DataStructures/)
+include_directories(${CMAKE_SOURCE_DIR}/../ScanMatching/)
+
 # Set Variables
 set(TARGET_A ekfSLAMTest)
 set(SOURCES_A EKFSLAMTest.cpp EKFSLAM.cpp)
 set(TARGET_B poseGraphOptSLAMTest)
-set(SOURCES_B PoseGraphOptSLAMTest.cpp PoseGraphOptSLAM.cpp)
+set(SOURCES_B PoseGraphOptSLAMTest.cpp PoseGraphOptSLAM.cpp ${CMAKE_SOURCE_DIR}/../ScanMatching/ICP.cpp)
 
 #Set-up Google Test
 set(CMAKE_CXX_STANDARD 14)

@@ -29,13 +29,27 @@ using namespace::Eigen;
 using std::vector;
 using std::pair;
 
-typedef struct pose Pose;
-typedef struct pose_edge PoseEdge;
-typedef struct odometry_reading OdometryReadng;
 typedef std::vector<size_t> SizeVector;
 typedef std::vector<double> ValueVector;
-//typedef vector<float> FloatVector;
-//typedef vector<VectorXf> VecctorXfVector;
+
+struct Pose {
+	//int Index; // Pose's Graph Index
+	MatrixXf TransformationMatrix; // Global Transformation Matrix. (w/ Current Position & Orientation)
+	VectorXf pose;
+	PointCloud Landmarks;
+};
+
+struct PoseEdge {
+    pair<int, int> PoseIndices; // Graph Indices of the 2 Poses
+	MatrixXf TransformationMatrix; // Transformation Matrix.
+    MatrixXf NoiseInfoMatrix; // Encodes the uncertainty in the transformation to the Pose.
+};
+
+struct OdometryReadng {
+	float RobotTranslation; 
+	float RobotRotation;
+};
+
 
 
 class PoseGraphOptSLAM {
@@ -55,6 +69,7 @@ class PoseGraphOptSLAM {
 	// Used in Front End
 	int NRecentPoses; 
 	float ClosureDistance;
+	PointCloud PreviousLandmarks;
 	
 	private:
 
@@ -178,22 +193,5 @@ class PoseGraphOptSLAM {
 
 };
 
-struct pose {
-	//int Index; // Pose's Graph Index
-	MatrixXf TransformationMatrix; // Global Transformation Matrix. (w/ Current Position & Orientation)
-	VectorXf pose;
-	PointCloud Landmarks;
-};
-
-struct pose_edge {
-    pair<int, int> PoseIndices; // Graph Indices of the 2 Poses
-	MatrixXf TransformationMatrix; // Transformation Matrix.
-    MatrixXf NoiseInfoMatrix; // Encodes the uncertainty in the transformation to the Pose.
-};
-
-struct odometry_reading {
-	float RobotTranslation; 
-	float RobotRotation;
-};
 
 

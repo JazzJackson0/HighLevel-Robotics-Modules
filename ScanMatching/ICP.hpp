@@ -13,10 +13,20 @@ using std::vector;
 using std::pair;
 using Eigen::VectorXf;
 using Eigen::MatrixXf;
-typedef struct point_cloud PointCloud;
-typedef struct rotation_translation RotationTranslation;
 using namespace::CppAD;
 using namespace::Eigen;
+
+struct PointCloud {
+	std::vector<VectorXf> Points;
+	std::vector<float> Weights;
+};
+
+struct RotationTranslation {
+	MatrixXf rotation_matrix;
+	VectorXf translation_vector;
+	VectorXf center_mass;
+	float weight;
+};
 
 class ICP {
 	
@@ -139,19 +149,8 @@ class ICP {
 		 * @return ** void
 		 */
 		void RunLeastSquares(VectorXf x, PointCloud RefPointCloud, PointCloud NewPointCloud);
-
 };
 
 
-struct point_cloud {
-	std::vector<VectorXf> Points;
-	std::vector<float> Weights;
-};
 
-struct rotation_translation {
-	MatrixXf rotation_matrix;
-	VectorXf translation_vector;
-	VectorXf center_mass;
-	float weight;
-};
 

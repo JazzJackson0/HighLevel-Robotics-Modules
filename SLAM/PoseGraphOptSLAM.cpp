@@ -84,7 +84,9 @@ bool PoseGraphOptSLAM::FrontEnd(PointCloud current_landmarks) {
 		VectorXf t;
 
 		ICP icp(PoseDimensions);
-		icp.RunSVD(current_landmarks);
+		icp.RunSVD(PreviousLandmarks, current_landmarks); // HOW TO HANDLE & UPDATE PREVIOUSLANDMARKS?!!!!!!!!!?!!!!!!!?!!!!!!!!!!!!!!!
+		
+		// GET & USE ICP OUTPUT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		
 		// Turn R & t to a Transformation Matrix
 		for (int i = 1; i <= R.cols() + 1; i++) {
@@ -163,7 +165,7 @@ bool PoseGraphOptSLAM::FrontEnd(PointCloud current_landmarks) {
 			PoseEdge closure_edge;
 			closure_edge.TransformationMatrix = pose.TransformationMatrix * 
 				Pose_Graph.Get_Vertex(closest_vertex_idx).TransformationMatrix;
-			Pose_Graph.Connect_Vertices(Pose_Graph.Get_NumOfVertices(), closest_vertex_idx, closure_edge);
+			Pose_Graph.Add_Edge(Pose_Graph.Get_NumOfVertices(), closest_vertex_idx, closure_edge);
 			AllEdges.push_back(closure_edge);
 			return true;
 		}
@@ -214,6 +216,15 @@ void PoseGraphOptSLAM::Optimize(OdometryReadng odom) {
 	}
 
 	// UPDATE THE ACTUAL POSE GRAPH WITH STATES FROM THE STATE VECTOR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	Pose pose_n;
+	for (int i = 0; i < StateVector.size(); i++) {
+
+		// Transform Pose Vectors to Transformation Matrices!!!!!!!!!!!!!!!!!!!!!
+
+		
+		
+		Pose_Graph.Update_Data(i, )
+	}
 }
 
 

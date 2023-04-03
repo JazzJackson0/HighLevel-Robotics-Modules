@@ -1,3 +1,4 @@
+#include <iostream>
 #include <gtest/gtest.h>
 #include "ICP.hpp"
  
@@ -70,7 +71,7 @@ TEST_F(ICPTest, RunSVDAlign) {
  * **/
 TEST_F(ICPTest, RunSVD) {
 
-	icp->RunSVD(p_cloud_new);
+	icp->RunSVD(p_cloud_old, p_cloud_new);
 }
 
 /**

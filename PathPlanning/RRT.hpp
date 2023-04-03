@@ -7,13 +7,12 @@
 #include "../DataStructures/Graph.hpp"
 using std::make_pair;
 
-struct node {	
+struct Node {	
 	int x;
 	int y;
 	int DistanceFromStart;
 	int ParentIndex;
 };
-typedef struct node Node;
 
 class RRT {
 
