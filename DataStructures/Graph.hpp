@@ -12,6 +12,7 @@ using std::vector;
 template <typename Z> struct Edge {
     int AdjacentVertexID;
     Z Weight;
+    int err;
 };
 
 
@@ -23,6 +24,7 @@ template <typename T, typename Z> struct Vertex {
     T Data;
     vector<Edge<Z>> Adjacents;
     int adjacents_pointer;
+    int err;
 };
 
 
@@ -269,6 +271,7 @@ Vertex<T, Z> Graph<T, Z>::Add_Vertex(T data, bool connected, Z weight) {
     new_vertex.Data = data;
     new_vertex.VertexID = G.size();
     new_vertex.adjacents_pointer = 0;
+    new_vertex.err = 0;
     G.push_back(new_vertex);
 
     if (connected) {
@@ -370,9 +373,12 @@ void Graph<T, Z>::Update_Data(int vertex_id, T data) {
 template <typename T, typename Z>
 Vertex<T, Z> Graph<T, Z>::DFS(T target_data, int current_vertex, vector<int> visited) {
 
+    Vertex<T, Z> error;
+
     if (current_vertex < 0 || current_vertex > G.size()){
         std::cerr << "Invalid Vertex ID" << std::endl;
-        //return NULL;
+        error.err = 0;
+        return error;
     }
     
     if (G[current_vertex].Data == target_data)
@@ -403,17 +409,20 @@ Vertex<T, Z> Graph<T, Z>::DFS(T target_data, int current_vertex, vector<int> vis
 
     // Can't go deeper
     if (visited.size() == G.size())
-        return G[0]; // TEMPORARY. REMOVE LATER when pointers added!!!!!
-        //return NULL;     
+        error.err = 1;
+        return error;     
 }
 
 
 template <typename T, typename Z>
 Vertex<T, Z> Graph<T, Z>::BFS(T target_data, int current_vertex) {
 
+    Vertex<T, Z> error;
+
     if (current_vertex < 0 || current_vertex > G.size()){
         std::cerr << "Invalid Vertex ID" << std::endl;
-        //return NULL;
+        error.err = 0;
+        return error;
     }
     
     if (G[current_vertex].Data == target_data)
@@ -463,8 +472,8 @@ Vertex<T, Z> Graph<T, Z>::BFS(T target_data, int current_vertex) {
         }
     }
 
-    return G[0]; // TEMPORARY. REMOVE LATER when pointers added!!!!!
-    //return NULL;
+    error.err = 1;
+    return error;
 }
 
 

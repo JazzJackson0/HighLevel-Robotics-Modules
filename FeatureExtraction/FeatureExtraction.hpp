@@ -1,4 +1,5 @@
 #pragma once
+#include <iostream>
 #include <cmath>
 #include <vector>
 #include </usr/include/eigen3/Eigen/Dense>
@@ -8,13 +9,14 @@
 
 using std::pair;
 using std::vector;
-using namespace::Eigen;
+using namespace Eigen;
 
 struct Point {
 
     float x;
     float y;
     float angle;
+    int err;
 };
 
 struct GeneralFormLine {
@@ -22,12 +24,14 @@ struct GeneralFormLine {
     double a;
     double b;
     double c;
+    int err;
 };
 
 struct SlopeInterceptLine{
 
     double m;
     double b;
+    int err;
 };
 
 struct Landmark {
@@ -38,6 +42,7 @@ struct Landmark {
     float bearing; // Bearing relative to robot
     vector<Point> points;
     GeneralFormLine line;
+    int err;
 };
 
 struct LineSegment {
@@ -47,6 +52,7 @@ struct LineSegment {
     int start_idx;
     int end_idx;
     vector<Point> endpoints;
+    int err;
 };
 
 
@@ -88,12 +94,12 @@ class FeatureExtractor {
         float Get_Point2LineDistance(Point point, GeneralFormLine general_line);
 
         /**
-         * @brief 
+         * @brief Get two points in a given line
          * 
          * @param x1 The x value used to calculate the first point
          * @param x2 The x value used to calculate the second point
-         * @param slope_line 
-         * @return vector<Point> 
+         * @param slope_line The line to get the points from
+         * @return vector<Point> The two points
          */
         vector<Point> Get_2PointsFromLine(int x1, int x2, SlopeInterceptLine slope_line);
 

@@ -83,7 +83,6 @@ std::vector<int> RRT::Get_Neighbors(float search_radius, Node randPos) {
     }
 
 	return NeighboringVectors;
-
 }
 
 
@@ -187,7 +186,6 @@ void RRT::Run_RRTStar(Node start, Node goal, float maxConnectionDistance, float 
 		// Re-wire other neighbors in search radius
 		int randP_index = RapidTree.Get_Graph().back().VertexID;
 		Rewire_Neighbors(neighbors, randP_index, randP);
-
     }
 }
 

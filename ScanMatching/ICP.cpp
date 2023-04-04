@@ -52,11 +52,11 @@ pair<PointCloud, PointCloud>  ICP::Calculate_Correspondences(PointCloud RefPoint
 
 VectorXf ICP::GetErrorVector(VectorXf x, VectorXf ReferencePoint, VectorXf NewPoint) {
 
-	VectorXf error(2);
-	error[0] = cos(x[2]) * NewPoint[0] - sin(x[2]) * NewPoint[1] + x[0] - ReferencePoint[0];
-	error[1] = sin(x[2]) * NewPoint[0] + cos(x[2]) * NewPoint[1] + x[0] - ReferencePoint[1];
+	VectorXf error_vector(2);
+	error_vector[0] = cos(x[2]) * NewPoint[0] - sin(x[2]) * NewPoint[1] + x[0] - ReferencePoint[0];
+	error_vector[1] = sin(x[2]) * NewPoint[0] + cos(x[2]) * NewPoint[1] + x[0] - ReferencePoint[1];
 
-	return error;
+	return error_vector;
 }
 
 

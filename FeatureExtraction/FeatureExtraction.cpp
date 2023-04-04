@@ -138,6 +138,7 @@ SlopeInterceptLine FeatureExtractor::CreateLinearModel(Point point_1, Point poin
 GeneralFormLine FeatureExtractor::ODRFit(vector<Point> laser_points) {
 
     GeneralFormLine fit_line;
+    fit_line.err = 0;
     int N = laser_points.size();
     float mX = 0.0;
     float mY = 0.0;
@@ -182,8 +183,12 @@ GeneralFormLine FeatureExtractor::ODRFit(vector<Point> laser_points) {
         }
 
         // Indefinite: sXX == sXY
-        else
-            return NULL;
+        else {
+            std::cerr << "ODRFit Error: Indefinite Line" << std::endl;
+            fit_line.err = 1;
+            return fit_line;
+        }
+            
     }
 
    
@@ -226,6 +231,7 @@ vector<Point> FeatureExtractor::Get_Endpoints(GeneralFormLine line, Point point_
 Landmark FeatureExtractor::ValidationGate(LineSegment feature) {
 
     Landmark validated;
+    validated.err = 0;
      
     // If Validated
     if (1 /*Nothing to Validate right now*/) {
@@ -235,7 +241,8 @@ Landmark FeatureExtractor::ValidationGate(LineSegment feature) {
         return validated;
     }
     
-    return NULL;
+    validated.err = 1;
+    return validated;
 }
 
 Point FeatureExtractor::OrthogProjectPoint2Line(SlopeInterceptLine slope_line, Point data_point) {
@@ -342,6 +349,7 @@ LineSegment FeatureExtractor::DetectSeedSegment(int num_of_points) {
 
     bool flag = false;
     LineSegment seed_seg;
+    seed_seg.err = 0;
     seed_seg.start_idx = breakpoint_idx;
 
     for (int i = seed_seg.start_idx; i < (num_of_points - MinSeedSegNum); i++) {
@@ -376,7 +384,8 @@ LineSegment FeatureExtractor::DetectSeedSegment(int num_of_points) {
         }
     }
 
-    return NULL;
+    seed_seg.err = 1;
+    return seed_seg;
 }
 
 
@@ -386,7 +395,8 @@ LineSegment FeatureExtractor::GrowSeedSegment(LineSegment seed_seg) {
     int beginning_point_index = max(breakpoint_idx, seed_seg.start_idx - 1);
     int final_point_index = min(seed_seg.end_idx + 1, LaserPoints.size());
     GeneralFormLine refit;
-    
+    LineSegment error;
+    error.err = 0;
 
     while (Get_Point2LineDistance(LaserPoints[final_point_index], seed_seg.line_fit) < Epsillon) {
 
@@ -442,7 +452,7 @@ LineSegment FeatureExtractor::GrowSeedSegment(LineSegment seed_seg) {
         subset.push_back(LaserPoints[i]);
     
     // Turn Seed Segment into the grown Line Segment
-    seed_seg.line_points = subset;
+    seed_seg.points = subset;
     seed_seg.line_fit = refit;
     seed_seg.start_idx = beginning_point_index;
     seed_seg.end_idx = final_point_index;
@@ -456,7 +466,8 @@ LineSegment FeatureExtractor::GrowSeedSegment(LineSegment seed_seg) {
         return seed_seg;
     }
 
-    return NULL;
+    error.err = 1;
+    return error;
 }
 
 

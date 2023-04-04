@@ -135,7 +135,6 @@ class RRT {
 		 * @return ** void 
 		 */
         void Run_RRTStar(Node start, Node goal, float maxConnectionDistance, float search_radius);
-
 };
 
 

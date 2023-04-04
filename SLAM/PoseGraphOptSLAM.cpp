@@ -22,17 +22,17 @@ VectorXf PoseGraphOptSLAM::GetErrorVector(VectorXf Pose_i, VectorXf Pose_j, Vect
 
 	float x_delta = Pose_j[0] - Pose_i[0];
 	float y_delta = Pose_j[0] - Pose_i[0];
-	VectorXf error(3);
+	VectorXf error_vector(3);
 	
-	error[0] = cos(MeasuredTranslatedVector[2]) * ((cos(Pose_i[2]) * x_delta + sin(Pose_i[2]) * y_delta) - MeasuredTranslatedVector[0]) 
+	error_vector[0] = cos(MeasuredTranslatedVector[2]) * ((cos(Pose_i[2]) * x_delta + sin(Pose_i[2]) * y_delta) - MeasuredTranslatedVector[0]) 
 		- sin(MeasuredTranslatedVector[2]) + ((sin(Pose_i[2]) * x_delta + cos(Pose_i[2]) * y_delta) - MeasuredTranslatedVector[1]);
 
-	error[1] = -sin(MeasuredTranslatedVector[2]) * ((cos(Pose_i[2]) * x_delta + sin(Pose_i[2]) * y_delta) - MeasuredTranslatedVector[0]) 
+	error_vector[1] = -sin(MeasuredTranslatedVector[2]) * ((cos(Pose_i[2]) * x_delta + sin(Pose_i[2]) * y_delta) - MeasuredTranslatedVector[0]) 
 		+ cos(MeasuredTranslatedVector[2]) + ((sin(Pose_i[2]) * x_delta + cos(Pose_i[2]) * y_delta) - MeasuredTranslatedVector[1]);
 
-	error[2] = (Pose_j[2] - Pose_i[2]) - MeasuredTranslatedVector[2];
+	error_vector[2] = (Pose_j[2] - Pose_i[2]) - MeasuredTranslatedVector[2];
 
-	return error;
+	return error_vector;
 }
 
 
