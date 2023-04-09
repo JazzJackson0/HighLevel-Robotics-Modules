@@ -215,7 +215,7 @@ void EKFSlam::Correction(std::vector<Landmark> landmarks, OdometryReadng odom) {
 	for (int i = 0; i < landmarks.size(); i++) {
 
 		Landmark j = Correspondence[landmarks[i].id];
-		if (j == NULL) { 
+		if (j.err != 1) { 
 
 			Landmark new_landmark_j;
 			//new_landmark_j.position.x = current_pose[0] + (landmarks[i].range * cos(landmarks[i].bearing * current_pose[2]));
@@ -287,6 +287,13 @@ EKFSlam::EKFSlam(Eigen::VectorXf initial_position, std::vector<VectorXf> map,
 		for (int i = 0; i < PoseDimensions; i++) { 
 			UpdateMappingFunction(i, i) = 1.0;
 			ObservationMappingFunction(i, i) = 1.0;
+		}
+
+		// Initialize Correspondence Matrix c with uninitialized landmarks
+		for (int i = 0; i < 1000; i++) {
+			Landmark lm;
+			lm.err = 1;
+			Correspondence[i] = lm;
 		}
 
 		Identity = MatrixXf::Identity(1, 2); // Set Dimensions THESE DIMENSIONS ARE TEMPORARY!!!!!!!!!!!!!!!!!!!!!!!

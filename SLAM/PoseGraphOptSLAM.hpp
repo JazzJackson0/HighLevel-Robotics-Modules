@@ -6,31 +6,35 @@
 #include <bits/c++config.h>
 #include <cmath>
 
-#include </usr/include/eigen3/Eigen/Sparse>
-#include </usr/include/eigen3/Eigen/Dense> // Are both of these needed?
-#include </usr/include/eigen3/Eigen/Cholesky>
-#include </usr/include/eigen3/Eigen/src/Core/util/Constants.h>
-
 #include <cppad/cppad.hpp>
-#include <cppad/core/sparse_jac.hpp>
-#include <cppad/utility/sparse_rc.hpp>
-#include <cppad/utility/sparse_rcv.hpp>
 #include <cppad/utility/sparse2eigen.hpp>
+//#include <cppad/core/sparse_jac.hpp>
+//#include <cppad/utility/sparse_rc.hpp>
+//#include <cppad/utility/sparse_rcv.hpp>
+
+
+//#include <eigen3/Eigen/Sparse>
+//#include <eigen3/Eigen/Cholesky>
+//#include <eigen3/Eigen/Dense>
+//#include <eigen3/Eigen/src/Core/util/Constants.h>
 
 #include "../DataStructures/Graph.hpp"
 #include "../ScanMatching/ICP.hpp"
+#include "utils.hpp"
 
-using CppAD::AD;
-using CppAD::NearEqual;
-using CppAD::sparse_rc;
-using CppAD::sparse_rcv;
-using namespace::CppAD;
-using namespace::Eigen;
+using namespace CppAD;
+using namespace Eigen;
+//using CppAD::AD;
+//using CppAD::NearEqual;
+//using CppAD::sparse_rc;
+//using CppAD::sparse_rcv;
+
+
 using std::vector;
 using std::pair;
 
 typedef std::vector<size_t> SizeVector;
-typedef std::vector<double> ValueVector;
+typedef std::vector<float> ValueVector;
 
 struct Pose {
 	//int Index; // Pose's Graph Index
@@ -42,7 +46,7 @@ struct Pose {
 struct PoseEdge {
     pair<int, int> PoseIndices; // Graph Indices of the 2 Poses
 	MatrixXf TransformationMatrix; // Transformation Matrix.
-    MatrixXf NoiseInfoMatrix; // Encodes the uncertainty in the transformation to the Pose.
+    Eigen::SparseMatrix<float, Eigen::RowMajor> NoiseInfoMatrix; // Encodes the uncertainty in the transformation to the Pose.
 };
 
 struct OdometryReadng {
@@ -56,7 +60,7 @@ class PoseGraphOptSLAM {
 
 	int MaxPoses;
 	int PoseDimensions;     
-	float time_interval;
+	bool InitialScan;
 	Vertex<Pose, PoseEdge> PreviousPose;
 	std::vector<AD<float>> X; // x j-i, x ij, y j-i, y ij, theta i, theta j, theta ij
 	std::vector<AD<float>> Y;
@@ -70,12 +74,15 @@ class PoseGraphOptSLAM {
 	int NRecentPoses; 
 	float ClosureDistance;
 	PointCloud PreviousLandmarks;
+	float OverlapTolerance;
 	
 	private:
 
 		/**
 		 * @brief  Returns a vector containing coordinate data, 
 		 * 				orientation, translational and angular velocity.
+		 * 				
+		 * 	For now this function assumes PoseDimensions variable is 3D (x, y, theta)
 		 *
 		 * @retirn ** vector<float> Coordinate data, 
 		 * 				Orientation, Translational & Angular velocity.
@@ -84,11 +91,36 @@ class PoseGraphOptSLAM {
 
 
 		/**
-		 * @brief Create a single State Vector from the Graph Nodes
+		 * @brief Takes 2 point clouds and determines the amount of overlap between them.
+		 * 			This is done by calculating the mean of each point cloud and returning
+		 * 			the euclidean distance between those two mean points.
 		 * 
-		 * @return ** VectorXf 
+		 * 			Not sure how robust this is but it seems like a good enough way to check for overlap
+		 * 
+		 * @param landmarks_a point cloud a
+		 * @param landmarks_b point cloud b
+		 * @return float - The overlap distance.
 		 */
-		VectorXf CreateStateVector();
+		float Calculate_Overlap(PointCloud landmarks_a, PointCloud landmarks_b);
+
+
+		/**
+		 * @brief Create a single State Vector from the Graph Nodes' Transformation matrices
+		 * 
+		 * @return ** pair<VectorXf, std::vector<VectorXf>> StateVector and coressponding rotation axes 
+		 */
+		pair<VectorXf, std::vector<VectorXf>> CreateStateVector();
+
+
+		/**
+		 * @brief Create a transformation matrix from given pose data (assumes a 3D pose [x, y, theta])
+		 * 
+		 * @param x x-position
+		 * @param y y-position
+		 * @param angle_axis angle and aaxis of rotation
+		 * @return MatrixXf 
+		 */
+		MatrixXf VectorToTransformationMatrix(int x, int y, AngleAndAxis angle_axis);
 
 
 		/**
@@ -156,7 +188,7 @@ class PoseGraphOptSLAM {
          */
 		pair<Eigen::SparseMatrix<float, Eigen::RowMajor>, VectorXf> BuildLinearSystem(
 				VectorXf pose_i, VectorXf pose_j, VectorXf MeasuredTranslatedVector, 
-				MatrixXf edge_covariance, OdometryReadng odom);		
+				Eigen::SparseMatrix<float, Eigen::RowMajor> edge_covariance, OdometryReadng odom);		
 		
 
     public:

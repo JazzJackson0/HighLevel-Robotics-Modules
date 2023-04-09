@@ -10,8 +10,20 @@
  */
 int gcd (int a, int b);
 
-
+/**
+ * @brief Return the largest value between the two numbers
+ * 
+ * @param a First number
+ * @param b Second number
+ * @return int 
+ */
 int max(int a, int b);
 
-
+/**
+ * @brief Return the smallest value between the two numbers
+ * 
+ * @param a First number
+ * @param b Second number
+ * @return int 
+ */
 int min(int a, int b);

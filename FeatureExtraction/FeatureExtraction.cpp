@@ -37,6 +37,8 @@ GeneralFormLine FeatureExtractor::SlopeInt2General(SlopeInterceptLine slope_line
     int denominator_limit = 1000;
     double integerPart;
     double fractionPart;
+    int numerator;
+    int div;
 
     GeneralFormLine general_line;
     general_line.a = -slope_line.m;
@@ -53,18 +55,18 @@ GeneralFormLine FeatureExtractor::SlopeInt2General(SlopeInterceptLine slope_line
     fractionPart = modf(general_line.a, &integerPart);
 
     // Calculate Simplified Denominator for A 
-    int numerator = (int)fractionPart * denominator_limit;
+    numerator = (int)fractionPart * denominator_limit;
     int denominator_a = denominator_limit;
-    int div = gcd(numerator, denominator_limit);
+    div = gcd(numerator, denominator_limit);
     denominator_a /= div; // (This denom calculated for the fraction part is the same as it would be for the entire number)
 
     // Pull out fraction part of C 
     fractionPart = modf(general_line.c, &integerPart);
 
     // Calculate Simplified Denominator for C 
-    int numerator = (int)fractionPart * denominator_limit;
+    numerator = (int)fractionPart * denominator_limit;
     int denominator_c = denominator_limit;
-    int div = gcd(numerator, denominator_limit);
+    div = gcd(numerator, denominator_limit);
     denominator_c /= div; // (This denom calculated for the fraction part is the same as it would be for the entire number)
 
     // Calculate the LCM

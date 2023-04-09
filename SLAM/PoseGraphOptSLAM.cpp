@@ -1,21 +1,70 @@
 #include "PoseGraphOptSLAM.hpp"
 
-VectorXf PoseGraphOptSLAM::CreateStateVector() {
+std::vector<float> PoseGraphOptSLAM::Get_PoseData() {
+
+}
+
+
+float PoseGraphOptSLAM::Calculate_Overlap(PointCloud landmarks_a, PointCloud landmarks_b) {
+
+	float mean_ax = 0.0;
+	float mean_ay = 0.0;
+	float mean_bx = 0.0;
+	float mean_by = 0.0;
+
+	// Calculate the mean of each point cloud
+	for (int i = 0; i < landmarks_a.Points.size(); i++) {
+		mean_ax += landmarks_a.Points[i](0);
+		mean_ay += landmarks_a.Points[i](1);
+	}
+	mean_ax /= landmarks_a.Points.size();
+	mean_ay /= landmarks_a.Points.size();
+
+ 
+	for (int i = 0; i < landmarks_b.Points.size(); i++) {
+		mean_bx += landmarks_b.Points[i](0);
+		mean_by += landmarks_b.Points[i](1);
+	}
+	mean_bx /= landmarks_b.Points.size();
+	mean_by /= landmarks_b.Points.size();
+
+	return (float) std::abs(sqrt((mean_ax - mean_bx)*(mean_ax - mean_bx) + (mean_ay - mean_by)*(mean_ay - mean_by)));
+}
+
+
+pair<VectorXf, std::vector<VectorXf>> PoseGraphOptSLAM::CreateStateVector() {
 
 	VectorXf StateVector(MaxPoses);
+	std::vector<VectorXf> rotation_axes;
 	std::vector<Vertex<Pose, PoseEdge>> vertices = Pose_Graph.Get_Graph();
 
 	// Loop through pose vertices
 	for (int i = 0; i < vertices.size(); i++) {
 		
-		// Loop through pose dimensions
-		for (int j = 0; j < PoseDimensions; j++) {
-			
-			StateVector << vertices[i].Data.pose[j];
-		}
+		MatrixXf rotation = vertices[i].Data.TransformationMatrix.block(0, 0, 3, 3);
+		VectorXf translation = vertices[i].Data.TransformationMatrix.block(0, 3, 1, 3);
+		AngleAndAxis angle_axis = RotationMatrix_to_Angle(rotation);
+		
+		// Loop through pose dimensions (assuming pose dimension of 3 [x, y, theta])
+		for (int j = 0; j < 2; j++)
+			StateVector << translation(j);
+		
+		StateVector << angle_axis.first;
+		rotation_axes.push_back(angle_axis.second);
 	}
 
-	return StateVector;
+	return std::make_pair(StateVector, rotation_axes);
+}
+
+MatrixXf PoseGraphOptSLAM::VectorToTransformationMatrix(int x, int y, AngleAndAxis angle_axis) {
+
+	MatrixXf rotation = Angle_to_RotationMatrix(angle_axis);
+	VectorXf translation(3);
+	translation << x, y, 0;
+	MatrixXf transformation(rotation.rows(), rotation.cols() + 1);
+	transformation << rotation, translation;
+
+	return transformation;
 }
 
 VectorXf PoseGraphOptSLAM::GetErrorVector(VectorXf Pose_i, VectorXf Pose_j, VectorXf MeasuredTranslatedVector) {
@@ -65,7 +114,8 @@ void PoseGraphOptSLAM::BuildErrorFunction() {
 		// Performs the derivative calculations on the empty x variables.
 	ErrorFunction = CppAD::ADFun<float>(X, Y);
 
-}	
+}
+
 
 
 
@@ -74,19 +124,20 @@ bool PoseGraphOptSLAM::FrontEnd(PointCloud current_landmarks) {
 	Pose pose;
 	PoseEdge edge;
 	pose.Landmarks = current_landmarks;
+	
+	if (InitialScan)	
+		PreviousLandmarks = current_landmarks;
 
-	// Check for level of overlap between landmark set of current & previous pose
+	/* Check for level of overlap between landmark set of current & previous pose
+		Add Pose & Edge to Graph if the amount of overlap is low enough*/
+	if (Calculate_Overlap(PreviousLandmarks, current_landmarks) > OverlapTolerance || InitialScan) {
 
-	// Add Pose & Edge to Graph if overlap is insignificant
-	if () {
-
-		MatrixXf R;
-		VectorXf t;
-
+		InitialScan = false;
 		ICP icp(PoseDimensions);
-		icp.RunSVD(PreviousLandmarks, current_landmarks); // HOW TO HANDLE & UPDATE PREVIOUSLANDMARKS?!!!!!!!!!?!!!!!!!?!!!!!!!!!!!!!!!
-		
-		// GET & USE ICP OUTPUT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		RotationTranslation rot_trans = icp.RunSVD(PreviousLandmarks, current_landmarks); 
+		MatrixXf R = rot_trans.rotation_matrix;
+		VectorXf t = rot_trans.translation_vector;
+		PreviousLandmarks = current_landmarks;
 		
 		// Turn R & t to a Transformation Matrix
 		for (int i = 1; i <= R.cols() + 1; i++) {
@@ -169,22 +220,26 @@ bool PoseGraphOptSLAM::FrontEnd(PointCloud current_landmarks) {
 			AllEdges.push_back(closure_edge);
 			return true;
 		}
-
-		else 
-			return false;
 	}
+
+	return false;
 } 
 
 
 
 void PoseGraphOptSLAM::Optimize(OdometryReadng odom) {
+	Eigen::SparseMatrix<float, Eigen::RowMajor> SparseMat1(MaxPoses, MaxPoses);
+	Eigen::SparseMatrix<float, Eigen::RowMajor> SparseMat2(MaxPoses, MaxPoses);
 
-	VectorXf StateVector = CreateStateVector();
+	pair<VectorXf, std::vector<VectorXf>> result = CreateStateVector();
+	VectorXf StateVector = result.first;
+	std::vector<VectorXf> rotation_axes = result.second; // Used for converting from State Vector back to Transformation matrices
 	VectorXf StateVectorUpdate;
 	StateVectorUpdate = VectorXf::Ones(MaxPoses);
+
 	pair<Eigen::SparseMatrix<float, Eigen::RowMajor>, VectorXf> total_result;
 	pair<Eigen::SparseMatrix<float, Eigen::RowMajor>, VectorXf> temp_result;
-	total_result.first = MatrixXf::Zero(MaxPoses, MaxPoses);
+	total_result.first = SparseMat1;
 	total_result.second = VectorXf::Zero(MaxPoses);
 
 	// While Nodes Not Converged
@@ -192,10 +247,12 @@ void PoseGraphOptSLAM::Optimize(OdometryReadng odom) {
 
 		for (int n = 0; n < AllEdges.size(); n++) { // Calculate & Sum H and b over every edge.
 
-			VectorXf pose_i = Pose_Graph.Get_Vertex(AllEdges[n].PoseIndices.first).pose;
-			VectorXf pose_j = Pose_Graph.Get_Vertex(AllEdges[n].PoseIndices.second).pose;
-			VectorXf translated_vector = AllEdges[n].TransformationMatrix * pose_i;
-			MatrixXf edge_covariance = AllEdges[n].NoiseInfoMatrix;
+			int edge_index_i = AllEdges[n].PoseIndices.first;
+			int edge_index_j = AllEdges[n].PoseIndices.second;
+			VectorXf pose_i = Pose_Graph.Get_Vertex(edge_index_i).pose;
+			VectorXf pose_j = Pose_Graph.Get_Vertex(edge_index_j).pose;
+			VectorXf translated_vector = Pose_Graph.Get_Edge(edge_index_i, edge_index_j).TransformationMatrix * pose_i;
+			Eigen::SparseMatrix<float, Eigen::RowMajor> edge_covariance = Pose_Graph.Get_Edge(edge_index_i, edge_index_j).NoiseInfoMatrix;
 			
 			// Build Linear System
 			temp_result = BuildLinearSystem(pose_i, pose_j, translated_vector, edge_covariance, odom);
@@ -215,15 +272,30 @@ void PoseGraphOptSLAM::Optimize(OdometryReadng odom) {
 
 	}
 
-	// UPDATE THE ACTUAL POSE GRAPH WITH STATES FROM THE STATE VECTOR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	Pose pose_n;
-	for (int i = 0; i < StateVector.size(); i++) {
+	// Update all vectors in Graph with new Transformation Matrices. i.e. Convert from StateVector back to transformation matrices.
+	int n = 0;
+	std::vector<Vertex<Pose, PoseEdge>> vertices = Pose_Graph.Get_Graph();
+	for (int i = 0; i < StateVector.size(); i = i + PoseDimensions) {
+	
+		vertices[n].Data.TransformationMatrix = VectorToTransformationMatrix(StateVector(i), StateVector(i+1), std::make_pair(StateVector(i+2), rotation_axes[n]));
+		n++;
+		Pose_Graph.Update_Data(n, vertices[n-1].Data);
+	}
 
-		// Transform Pose Vectors to Transformation Matrices!!!!!!!!!!!!!!!!!!!!!
 
-		
-		
-		Pose_Graph.Update_Data(i, )
+	// Update all corresponding edge transformation matrices: Loop through poses in graph
+	for (int i = 0; i < vertices.size(); i++) {
+
+		// Update all adjacent edges for pose i
+		for (int j = 0; j < vertices[i].Adjacents.size(); j++) {
+
+			PoseEdge edge = vertices[i].Adjacents[j].Weight;
+			edge.TransformationMatrix = vertices[i].Data.TransformationMatrix 
+				* Pose_Graph.Get_Vertex(vertices[i].Adjacents[j].AdjacentVertexID).TransformationMatrix;
+
+			Pose_Graph.Update_Edge(i + 1, 
+				vertices[i].Adjacents[j].AdjacentVertexID, edge);
+		}
 	}
 }
 
@@ -231,7 +303,7 @@ void PoseGraphOptSLAM::Optimize(OdometryReadng odom) {
 
 pair<Eigen::SparseMatrix<float, Eigen::RowMajor>, VectorXf> PoseGraphOptSLAM::BuildLinearSystem(
 		VectorXf pose_i, VectorXf pose_j, VectorXf MeasuredTranslatedVector, 
-		MatrixXf edge_covariance, OdometryReadng odom) {
+		Eigen::SparseMatrix<float, Eigen::RowMajor> edge_covariance, OdometryReadng odom) {
 	
 	pair<Eigen::SparseMatrix<float, Eigen::RowMajor>, VectorXf> result;
 
@@ -284,7 +356,7 @@ pair<Eigen::SparseMatrix<float, Eigen::RowMajor>, VectorXf> PoseGraphOptSLAM::Bu
 		SparseMatrix, JacobianSparsityPattern, ColoringAlgo, Work);
 	
 	// Convert to Eigen format
-	Eigen::SparseMatrix<double, Eigen::RowMajor> Jac;
+	Eigen::SparseMatrix<float, Eigen::RowMajor> Jac;
 	CppAD::sparse2eigen(SparseMatrix, Jac);
 
 	// STEP 3: Linearize the Error Function -----------------
@@ -292,10 +364,12 @@ pair<Eigen::SparseMatrix<float, Eigen::RowMajor>, VectorXf> PoseGraphOptSLAM::Bu
 
 	// STEP 4: Create the H Matrix & b vector -----------------
 	// Compute Hessian			
-	Eigen::SparseMatrix<float, Eigen::RowMajor> Hess = Jac.transpose() * (edge_covariance * Jac);
+	Eigen::SparseMatrix<float, Eigen::RowMajor> omega_J = (edge_covariance * Jac);
+	Eigen::SparseMatrix<float, Eigen::RowMajor> Hess(MaxPoses, MaxPoses);
+	Hess = Jac.transpose() * omega_J;
 
 	// Compute b
-	VectorXf b = LinearizedErrorVector.transpose() * (edge_covariance * Jac);
+	VectorXf b = LinearizedErrorVector.transpose() * omega_J;
 
 	result.first = Hess;
 	result.second = b;
@@ -306,11 +380,13 @@ pair<Eigen::SparseMatrix<float, Eigen::RowMajor>, VectorXf> PoseGraphOptSLAM::Bu
 PoseGraphOptSLAM::PoseGraphOptSLAM(int max_nodes, int pose_dimension, int independent_val_num,
 					int guess_variation) {
 	
+	InitialScan = true;
 	MaxPoses = max_nodes;
 	PoseDimensions = pose_dimension;
 	PreviousPose.Data.pose.setZero(pose_dimension);
 	VariationAroundGuess = guess_variation;
 	NRecentPoses = 5;
+	OverlapTolerance = 1.0; // Just a random value for now!!
 
 	std::vector<AD<float>> xs(PoseDimensions);
 	std::vector<AD<float>> ys(PoseDimensions);  // Are these Dimensions Correct???????? NO THEY ARE NOT!!!
@@ -329,10 +405,8 @@ void PoseGraphOptSLAM::FrontEndInit(int n_recent_poses, float closure_distance) 
 
 void PoseGraphOptSLAM::Run(PointCloud current_landmarks, OdometryReadng odom) {
 	
-	if (FrontEnd(current_landmarks)) {
-
+	if (FrontEnd(current_landmarks))
 		Optimize(odom);
-	}
 }
 
 

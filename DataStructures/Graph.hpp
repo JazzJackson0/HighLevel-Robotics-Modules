@@ -95,6 +95,16 @@ class Graph {
 
 
         /**
+         * @brief Returns the edge between 2 vertices
+         * 
+         * @param idx1
+         * @param idx2
+         * @return ** Z 
+         */
+        Z Get_Edge(int idx1, int idx2);
+
+
+        /**
          * @brief Returns all Vertices in the form of a pair.
          *          ||| First Element in Pair: Number of Vertices in Graph.
          *          ||| Second Element in Pair: Vector array of all Vertices.
@@ -157,6 +167,16 @@ class Graph {
 
 
         /**
+         * @brief Updates (overwrites) the edge data (from id1 to id2 for directed & between both for undirected) 
+         * 
+         * @param idx1 index of vertex whose edge will be updated
+         * @param idx2 index of vertex whose edge will be updated
+         * @param data new data
+         */
+        void Update_Edge(int idx1, int idx2, Z data);
+
+
+        /**
          * @brief Performs Depth First Search. (Recursively)
          * 
          * @param target_data 
@@ -207,7 +227,7 @@ Graph<T, Z>::Graph() {
 
 
 template <typename T, typename Z>        
-Graph<T, Z>::Graph(vector<Vertex<T, Z>> adjacency_list, bool state) : G(adjacency_list) {
+Graph<T, Z>::Graph(std::vector<Vertex<T, Z>> adjacency_list, bool state) : G(adjacency_list) {
 
     Directed = state;
     G = adjacency_list;
@@ -249,16 +269,32 @@ T Graph<T, Z>::Get_Vertex(int vertex_id) {
 }
 
 
+template <typename T, typename Z>
+Z Graph<T, Z>::Get_Edge(int idx1, int idx2) {
+
+    if ((idx1 < 1 || idx1 > G.size()) || (idx2 < 1 || idx2 > G.size())) {
+
+        std::cerr << "Invalid Index" << std::endl;
+    }
+
+    for (int i = 0; i < G[idx1].Adjacents.size(); i++) {
+
+        if (G[idx1].Adjacents[i].AdjacentVertexID == idx2)
+            return G[idx1].Adjacents[i].Weight;
+    }
+}
+
+
 
 template <typename T, typename Z>
-vector<Vertex<T, Z>> Graph<T, Z>::Get_Graph() {
+std::vector<Vertex<T, Z>> Graph<T, Z>::Get_Graph() {
     
     return G;
 }
 
 
 template <typename T, typename Z>
-vector<Edge<Z>> Graph<T, Z>::Get_AdjacentVertices(int vertex_id) {
+std::vector<Edge<Z>> Graph<T, Z>::Get_AdjacentVertices(int vertex_id) {
 
     return G[vertex_id].Adjacents;
 }
@@ -314,7 +350,7 @@ void Graph<T, Z>::Add_Edge(int vertex1_ID, int vertex2_ID, Z weight) {
 template <typename T, typename Z>
 void Graph<T, Z>::Remove_Edge(int index1, int index2) {
 
-    if ((index1 < 0 || index1 > G.size()) || (index2 < 0 || index2 > G.size())) {
+    if ((index1 < 1 || index1 > G.size()) || (index2 < 1 || index2 > G.size())) {
 
         std::cerr << "Invalid Index" << std::endl;
         return;
@@ -370,8 +406,37 @@ void Graph<T, Z>::Update_Data(int vertex_id, T data) {
 }
 
 
+
 template <typename T, typename Z>
-Vertex<T, Z> Graph<T, Z>::DFS(T target_data, int current_vertex, vector<int> visited) {
+void Graph<T, Z>::Update_Edge(int idx1, int idx2, Z data) {
+
+    if ((idx1 < 1 || idx1 > G.size()) || (idx2 < 1 || idx2 > G.size())) {
+
+        std::cerr << "Invalid Index" << std::endl;
+        return;
+    }
+
+    // Update idx1 edge
+    for (int i = 0; i < G[idx1].Adjacents.size(); i++) {
+
+        if (G[idx1].Adjacents[i].AdjacentVertexID == idx2) {
+            G[idx1].Adjacents[i].Weight = data;
+
+            // Update idx2 edge
+            if (!Directed) {
+
+                for (int j = 0; j < G[idx2].Adjacents.size(); j++) {
+                    if (G[idx2].Adjacents[j].AdjacentVertexID == idx1)
+                        G[idx2].Adjacents[j].Weight = data;
+                }
+            }
+        }
+    }
+}
+
+
+template <typename T, typename Z>
+Vertex<T, Z> Graph<T, Z>::DFS(T target_data, int current_vertex, std::vector<int> visited) {
 
     Vertex<T, Z> error;
 

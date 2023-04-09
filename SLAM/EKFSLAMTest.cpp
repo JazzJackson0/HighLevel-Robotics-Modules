@@ -45,5 +45,8 @@ class EKFSlamTest : public ::testing::Test {
  * **/
 TEST_F(EKFSlamTest, Run1) {
 
-	ekf->Run();
+	std::vector<VectorXf> current_scan; 
+	VectorXf current_pose; 
+	OdometryReadng odom;
+	ekf->Run(current_scan, current_pose, odom);
 }

@@ -299,6 +299,8 @@ void ICP::RunLeastSquares(VectorXf x, PointCloud RefPointCloud, PointCloud NewPo
  * 			TO-DO
  * 			-----
  *  - Test Code
+ * 
+ *  - Do INVERSE multiplicatoin between transformation matrices to get edges!
  *  
  *  - Need a function to set the weight values for each point in a PointCloud
  *
