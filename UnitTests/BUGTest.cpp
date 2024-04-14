@@ -19,7 +19,10 @@ class BUGTest : public ::testing::Test {
 			bug = new Bug(pose, goal, forward_speed, turn_speed);
 		}
 			
-		//~BUGTest() {}
+		~BUGTest() {
+
+			delete bug;
+		}
 
 		Bug *bug;
 };

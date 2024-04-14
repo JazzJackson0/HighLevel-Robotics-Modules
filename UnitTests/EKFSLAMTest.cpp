@@ -33,7 +33,10 @@ class EKFSlamTest : public ::testing::Test {
 			ekf = new EKFSlam(initial_pos, map, pose_dim, landmark_dim, max_landmarks, obs_cov, motion_cov);
 		}
 			
-		//~EKFSlamTest() {}
+		~EKFSlamTest() {
+
+			delete ekf;
+		}
 
 		EKFSlam * ekf;
 };

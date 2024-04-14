@@ -16,7 +16,7 @@ class ParticleFilterTest : public ::testing::Test {
 		}
 			
 		~ParticleFilterTest() {
-
+			delete pfilter;
 		}
 
 		ParticleFilter *pfilter;

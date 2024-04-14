@@ -193,6 +193,12 @@ class PoseGraphOptSLAM {
 
     public:
 
+		/**
+         * @brief Default Constructor.
+		 *
+         */
+        PoseGraphOptSLAM();
+
         /**
          * @brief Initialies a Pose Graph Optimization object.
 		 *

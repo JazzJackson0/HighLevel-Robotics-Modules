@@ -8,14 +8,14 @@ include_directories(${CMAKE_SOURCE_DIR}/../FeatureExtraction/)
 
 # Set Variables
 set(TARGET_A ekfSLAMTest)
-set(SOURCES_A EKFSLAMTest.cpp EKFSLAM.cpp ${CMAKE_SOURCE_DIR}/../FeatureExtraction/FeatureExtraction.cpp ${CMAKE_SOURCE_DIR}/../FeatureExtraction/utils.cpp)
+set(SOURCES_A ../UnitTests/EKFSLAMTest.cpp EKFSLAM.cpp ${CMAKE_SOURCE_DIR}/../FeatureExtraction/FeatureExtraction.cpp ${CMAKE_SOURCE_DIR}/../FeatureExtraction/utils.cpp)
 set(TARGET_B poseGraphOptSLAMTest)
-set(SOURCES_B PoseGraphOptSLAMTest.cpp PoseGraphOptSLAM.cpp ${CMAKE_SOURCE_DIR}/../ScanMatching/ICP.cpp utils.cpp)
+set(SOURCES_B ../UnitTests/PoseGraphOptSLAMTest.cpp PoseGraphOptSLAM.cpp ${CMAKE_SOURCE_DIR}/../ScanMatching/ICP.cpp utils.cpp)
 
 #Set-up Google Test
 set(CMAKE_CXX_STANDARD 14)
 
-include(FetchContent)
+include(FetchContent) # https://cmake.org/cmake/help/latest/module/FetchContent.html
 FetchContent_Declare(
   googletest
   URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip

@@ -4,7 +4,8 @@
 
 float FeatureExtractor::Get_EuclideanDistance(Point point_a, Point point_b) {
 
-    return sqrt(pow((point_b.x - point_a.x), 2) + pow((point_b.y - point_a.y), 2));
+    //return sqrt(pow((point_b.x - point_a.x), 2) + pow((point_b.y - point_a.y), 2));
+    return 5;
 }
 
 float FeatureExtractor::Get_Point2LineDistance(Point point, GeneralFormLine general_line) {
@@ -304,6 +305,10 @@ void FeatureExtractor::reinit() {
     breakpoint_idx = 0;
 }
 
+// Public------------------------------------------------------------------------------------------------
+FeatureExtractor::FeatureExtractor(){
+
+};
 
 
 FeatureExtractor::FeatureExtractor(float delta, float epsillon, int min_seed_seg_num) {

@@ -16,7 +16,9 @@ class PoseGraphOptSLAMTest : public ::testing::Test {
 			pose_graph = new PoseGraphOptSLAM(max_nodes, pose_dimension, independent_val, guess_variation);
 		}
 			
-		//~PoseGraphOptSLAMTest() {}
+		~PoseGraphOptSLAMTest() {
+			delete pose_graph;
+		}
 
 		PoseGraphOptSLAM *pose_graph;
 };

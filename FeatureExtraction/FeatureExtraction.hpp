@@ -82,7 +82,7 @@ class FeatureExtractor {
          * @param point_b 
          * @return float 
          */
-        float Get_EuclideanDistance(Point point_a, Point point_b);
+        virtual float Get_EuclideanDistance(Point point_a, Point point_b);
 
         /**
          * @brief 
@@ -91,7 +91,7 @@ class FeatureExtractor {
          * @param general_line 
          * @return float 
          */
-        float Get_Point2LineDistance(Point point, GeneralFormLine general_line);
+        virtual float Get_Point2LineDistance(Point point, GeneralFormLine general_line);
 
         /**
          * @brief Get two points in a given line
@@ -101,7 +101,7 @@ class FeatureExtractor {
          * @param slope_line The line to get the points from
          * @return vector<Point> The two points
          */
-        vector<Point> Get_2PointsFromLine(int x1, int x2, SlopeInterceptLine slope_line);
+        virtual vector<Point> Get_2PointsFromLine(int x1, int x2, SlopeInterceptLine slope_line);
 
         /**
          * @brief Converts Line from Slope-Intercept Form to General Form
@@ -109,7 +109,7 @@ class FeatureExtractor {
          * @param slope_line 
          * @return GeneralFormLine 
          */
-        GeneralFormLine SlopeInt2General(SlopeInterceptLine slope_line);
+        virtual GeneralFormLine SlopeInt2General(SlopeInterceptLine slope_line);
 
 
         /**
@@ -118,7 +118,7 @@ class FeatureExtractor {
          * @param general_line 
          * @return SlopeInterceptLine 
          */
-        SlopeInterceptLine General2SlopeInt(GeneralFormLine general_line);
+        virtual SlopeInterceptLine General2SlopeInt(GeneralFormLine general_line);
 
         /**
          * @brief Calculate the intersection between 2 lines
@@ -127,7 +127,7 @@ class FeatureExtractor {
          * @param general_line_2 
          * @return Point 
          */
-        Point Get_Intersection(GeneralFormLine general_line_1, GeneralFormLine general_line_2);
+        virtual Point Get_Intersection(GeneralFormLine general_line_1, GeneralFormLine general_line_2);
 
         /**
          * @brief Get Position Coordinate from Angle & Distance Information
@@ -136,7 +136,7 @@ class FeatureExtractor {
          * @param angle 
          * @return Point 
          */
-        Point AD2Position(float dist, float angle);
+        virtual Point AD2Position(float dist, float angle);
 
         /**
          * @brief Transform scan from array of range & bearing values to array of position coordinates
@@ -144,7 +144,7 @@ class FeatureExtractor {
          * @param scan 
          * @return vector<Point> 
          */
-        vector<Point> TransformScan(vector<VectorXf> scan);
+        virtual vector<Point> TransformScan(vector<VectorXf> scan);
 
         /**
          * @brief Create a Linear Model given two points
@@ -153,7 +153,7 @@ class FeatureExtractor {
          * @param point_2 
          * @return SlopeInterceptLine 
          */
-        SlopeInterceptLine CreateLinearModel(Point point_1, Point point_2);
+        virtual SlopeInterceptLine CreateLinearModel(Point point_1, Point point_2);
 
 
         /**
@@ -162,7 +162,7 @@ class FeatureExtractor {
          * @param laser_points 
          * @return GeneralFormLine 
          */
-        GeneralFormLine ODRFit(vector<Point> laser_points);
+        virtual GeneralFormLine ODRFit(vector<Point> laser_points);
 
         /**
          * @brief 
@@ -172,7 +172,7 @@ class FeatureExtractor {
          * @param point_in_scan The geven point from the scan
          * @return Point 
          */
-        Point Get_PointPrediction(GeneralFormLine fitted_line, Point point_in_scan);
+        virtual Point Get_PointPrediction(GeneralFormLine fitted_line, Point point_in_scan);
 
 
         /**
@@ -183,7 +183,7 @@ class FeatureExtractor {
          * @param point_b 
          * @return vector<Point> 
          */
-        vector<Point> Get_Endpoints(GeneralFormLine line, Point point_a, Point point_b);
+        virtual vector<Point> Get_Endpoints(GeneralFormLine line, Point point_a, Point point_b);
         
         /**
          * @brief 
@@ -191,7 +191,7 @@ class FeatureExtractor {
          * @param feature 
          * @return Landmark 
          */
-        Landmark ValidationGate(LineSegment feature);
+        virtual Landmark ValidationGate(LineSegment feature);
         
         /**
          * @brief Calculate the Orthogonal Projection of a given point to a given line
@@ -200,7 +200,7 @@ class FeatureExtractor {
          * @param data_point 
          * @return Point 
          */
-        Point OrthogProjectPoint2Line(SlopeInterceptLine slope_line, Point data_point);
+        virtual Point OrthogProjectPoint2Line(SlopeInterceptLine slope_line, Point data_point);
 
 
         /**
@@ -209,16 +209,19 @@ class FeatureExtractor {
          *      version of it with the new one) or new (upon which you add that landmark to the saved ones).
          * 
          */
-        void CheckOverlap();
+        virtual void CheckOverlap();
 
         /**
          * @brief 
          * 
          */
-        void reinit();
+        virtual void reinit();
 
 
     public:
+
+        // Default construtor
+        FeatureExtractor();
 
         /**
          * @brief Construct a new Feature Extractor object
@@ -234,7 +237,7 @@ class FeatureExtractor {
          * 
          * @param current_scan 
          */
-        vector<Landmark> LandmarksFromScan(vector<VectorXf> current_scan);
+        virtual vector<Landmark> LandmarksFromScan(vector<VectorXf> current_scan);
 
 
         /**
@@ -243,7 +246,7 @@ class FeatureExtractor {
          * @param num_of_points 
          * @return SeedSegment 
          */
-        LineSegment DetectSeedSegment(int num_of_points);
+        virtual LineSegment DetectSeedSegment(int num_of_points);
 
 
         /**
@@ -252,7 +255,7 @@ class FeatureExtractor {
          * @param seed_seg 
          * @return LineSegment 
          */
-        LineSegment GrowSeedSegment(LineSegment seed_seg);
+        virtual LineSegment GrowSeedSegment(LineSegment seed_seg);
 
 
         /**
@@ -260,7 +263,7 @@ class FeatureExtractor {
          * 
          * @param delta 
          */
-        void Set_Delta(float delta);
+        virtual void Set_Delta(float delta);
 
 
         /**
@@ -268,7 +271,7 @@ class FeatureExtractor {
          * 
          * @param epsillon 
          */
-        void Set_Epsillon(float epsillon);
+        virtual void Set_Epsillon(float epsillon);
 
 
         /**
@@ -276,7 +279,7 @@ class FeatureExtractor {
          * 
          * @param gap_val 
          */
-        void Set_GapValue(float gap_val);
+        virtual void Set_GapValue(float gap_val);
 
 
         /**
@@ -284,7 +287,7 @@ class FeatureExtractor {
          * 
          * @param min_seed_seg_num 
          */
-        void Set_MinSeedSegNum(int min_seed_seg_num);
+        virtual void Set_MinSeedSegNum(int min_seed_seg_num);
 
 
         /**
@@ -292,7 +295,7 @@ class FeatureExtractor {
          * 
          * @param min_line_seg_num 
          */
-        void Set_MinLineSegNum(int min_line_seg_num);
+        virtual void Set_MinLineSegNum(int min_line_seg_num);
 
 
         /**
@@ -300,7 +303,8 @@ class FeatureExtractor {
          * 
          * @param min_line_seg_len 
          */
-        void Set_MinLineSegLen(float min_line_seg_len);
+        virtual void Set_MinLineSegLen(float min_line_seg_len);
+
 };
 
 

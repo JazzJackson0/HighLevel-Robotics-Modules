@@ -48,7 +48,9 @@ class ICPTest : public ::testing::Test {
 			icp = new ICP(pose_dimension);
 		}
 			
-		//~ICPTest() {}
+		~ICPTest() {
+			delete icp;
+		}
 
 		ICP *icp;
 		PointCloud p_cloud_old;

@@ -4,16 +4,16 @@ project(PathPlanning)
 
 # Set Variables
 set(TARGET_A aStarTest)
-set(SOURCES_A AStarTest.cpp AStar.cpp)
+set(SOURCES_A ../UnitTests/AStarTest.cpp AStar.cpp)
 set(TARGET_B bugTest)
-set(SOURCES_B BUGTest.cpp BUG.cpp)
+set(SOURCES_B ../UnitTests/BUGTest.cpp BUG.cpp)
 set(TARGET_C rrtTest)
-set(SOURCES_C RRTTest.cpp RRT.cpp)
+set(SOURCES_C ../UnitTests/RRTTest.cpp RRT.cpp)
 
 #Set-up Google Test
 set(CMAKE_CXX_STANDARD 14)
 
-include(FetchContent)
+include(FetchContent)  # https://cmake.org/cmake/help/latest/module/FetchContent.html
 FetchContent_Declare(
   googletest
   URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip

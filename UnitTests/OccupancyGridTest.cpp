@@ -17,7 +17,9 @@ class OccupancyGridMapTest : public ::testing::Test {
 			occupancy_grid = new OccupancyGridMap(row_num, col_num, alpha, beta, max_scan_range);
 		}
 			
-		//~OccupancyGridMapTest() {}
+		~OccupancyGridMapTest() {
+			delete occupancy_grid;
+		}
 
 		OccupancyGridMap *occupancy_grid;
 };

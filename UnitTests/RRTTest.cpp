@@ -25,7 +25,9 @@ class RRTTest : public ::testing::Test {
 			rrt = new RRT(grid, grid_width, grid_height);
 		}
 			
-		//~RRTTest() {}
+		~RRTTest() {
+			delete rrt;
+		}
 
 		RRT *rrt;
 };

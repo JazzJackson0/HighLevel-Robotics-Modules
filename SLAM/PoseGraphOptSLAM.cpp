@@ -376,6 +376,11 @@ pair<Eigen::SparseMatrix<float, Eigen::RowMajor>, VectorXf> PoseGraphOptSLAM::Bu
 	return result;
 }
 
+//Public --------------------------------------------------------------------------------------------------------
+PoseGraphOptSLAM::PoseGraphOptSLAM() {
+
+
+}
 
 PoseGraphOptSLAM::PoseGraphOptSLAM(int max_nodes, int pose_dimension, int independent_val_num,
 					int guess_variation) {
