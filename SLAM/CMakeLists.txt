@@ -8,7 +8,8 @@ include_directories(${CMAKE_SOURCE_DIR}/../FeatureExtraction/)
 
 # Set Variables
 set(TARGET_A ekfSLAMTest)
-set(SOURCES_A ../UnitTests/EKFSLAMTest.cpp EKFSLAM.cpp ${CMAKE_SOURCE_DIR}/../FeatureExtraction/FeatureExtraction.cpp ${CMAKE_SOURCE_DIR}/../FeatureExtraction/utils.cpp)
+set(SOURCES_A ../UnitTests/EKFSLAMTest.cpp EKFSLAM.cpp ${CMAKE_SOURCE_DIR}/../FeatureExtraction/FeatureExtraction.cpp 
+  ${CMAKE_SOURCE_DIR}/../FeatureExtraction/utils.cpp)
 set(TARGET_B poseGraphOptSLAMTest)
 set(SOURCES_B ../UnitTests/PoseGraphOptSLAMTest.cpp PoseGraphOptSLAM.cpp ${CMAKE_SOURCE_DIR}/../ScanMatching/ICP.cpp utils.cpp)
 
