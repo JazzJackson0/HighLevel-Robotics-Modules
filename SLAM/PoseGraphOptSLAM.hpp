@@ -44,51 +44,45 @@ struct Pose {
 };
 
 struct PoseEdge {
-    pair<int, int> PoseIndices; // Graph Indices of the 2 Poses
 	MatrixXf TransformationMatrix; // Transformation Matrix.
-    Eigen::SparseMatrix<float, Eigen::RowMajor> NoiseInfoMatrix; // Encodes the uncertainty in the transformation to the Pose.
+    MatrixXf NoiseInfoMatrix; // Encodes the uncertainty in the transformation to the Pose.
 };
 
-struct OdometryReadng {
-	float RobotTranslation; 
-	float RobotRotation;
+struct HbResults {
+	MatrixXf Hii;
+	MatrixXf Hjj;
+	MatrixXf Hij;
+	MatrixXf Hji;
+	VectorXf bi;
+	VectorXf bj;
 };
-
 
 
 class PoseGraphOptSLAM {
 
-	int MaxPoses;
+	int MaxPoses_n;
+	int CurrentPoses_n;
 	int PoseDimensions;     
 	bool InitialScan;
-	Vertex<Pose, PoseEdge> PreviousPose;
-	std::vector<AD<float>> X; // x j-i, x ij, y j-i, y ij, theta i, theta j, theta ij
+	VectorXf StateVector;
+	std::vector<VectorXf> rotation_axes; // Used for converting from State Vector back to Transformation matrices
+	Pose PreviousPose;
+	std::vector<AD<float>> X; // x_j, x_i, y_j, y_i, theta_j, theta_i
 	std::vector<AD<float>> Y;
 	ADFun<float> ErrorFunction;
 	int VariationAroundGuess;
 	float min_convergence_thresh;
 	Graph<Pose, PoseEdge> Pose_Graph;
-	std::vector<PoseEdge> AllEdges;
+	int max_iterations;
 
 	// Used in Front End
 	int NRecentPoses; 
 	float ClosureDistance;
 	PointCloud PreviousLandmarks;
 	float OverlapTolerance;
+	ICP icp;
 	
 	private:
-
-		/**
-		 * @brief  Returns a vector containing coordinate data, 
-		 * 				orientation, translational and angular velocity.
-		 * 				
-		 * 	For now this function assumes PoseDimensions variable is 3D (x, y, theta)
-		 *
-		 * @retirn ** vector<float> Coordinate data, 
-		 * 				Orientation, Translational & Angular velocity.
-		 */
-		std::vector<float> Get_PoseData(); 
-
 
 		/**
 		 * @brief Takes 2 point clouds and determines the amount of overlap between them.
@@ -105,14 +99,6 @@ class PoseGraphOptSLAM {
 
 
 		/**
-		 * @brief Create a single State Vector from the Graph Nodes' Transformation matrices
-		 * 
-		 * @return ** pair<VectorXf, std::vector<VectorXf>> StateVector and coressponding rotation axes 
-		 */
-		pair<VectorXf, std::vector<VectorXf>> CreateStateVector();
-
-
-		/**
 		 * @brief Create a transformation matrix from given pose data (assumes a 3D pose [x, y, theta])
 		 * 
 		 * @param x x-position
@@ -124,12 +110,39 @@ class PoseGraphOptSLAM {
 
 
 		/**
+		 * @brief Update the State Vector from the Graph Nodes' Transformation matrices received from Front End
+		 * 
+		 * @return ** pair<VectorXf, std::vector<VectorXf>> StateVector and coressponding rotation axes 
+		 */
+		void UpdateStateVector();
+
+
+		/**
+		 * @brief 
+		 * 
+		 * @param pose 
+		 * @return true 
+		 * @return false 
+		 */
+		bool CheckForLoopClosure(Pose pose);
+
+
+		/**
+		 * @brief 
+		 * 
+		 * @param pose 
+		 * @param edge 
+		 */
+		void AddPoseToGraph(Pose pose, PoseEdge edge);
+
+
+		/**
 		 * @brief Output the difference between measured pose transformation
 		 * 			and predicted pose transformation.
 		 * 
 		 * @param Pose_i The ith Pose
 		 * @param Pose_j The jth Pose
-		 * @param MeasuredTranslatedVector Change in x, y and theta. Obtained from the given Edge
+		 * @param MeasuredTranslatedVector Translation & Rotation. Obtained from the given Edge between poses i and j
 		 * @return ** VectorXf The Error Vector
 		 */
 		VectorXf GetErrorVector(VectorXf Pose_i, VectorXf Pose_j, VectorXf MeasuredTranslatedVector);
@@ -146,7 +159,24 @@ class PoseGraphOptSLAM {
 		 *
 		 * @return ** void
 		 */
-		void BuildErrorFunction();
+		void Build_ErrorFunction();
+
+
+		/**
+         * @brief Creates the H matrix and b vector for the Linear system
+         *          needed to minimize the error.
+         * 
+         * @param pose_i The ith Pose
+		 * @param pose_j The jth Pose
+		 * @param MeasuredTranslatedVector 
+		 * @param edge_covariance Covariance for the given ij Edge
+		 * @param odom Odometry reading (translation velocity & rotation velocity) 
+		 * 
+         * @return ** HbResults
+         */
+		HbResults Build_LinearSystem(
+				VectorXf pose_i, VectorXf pose_j, VectorXf MeasuredTranslatedVector, 
+				MatrixXf edge_covariance);
 
 
 
@@ -165,32 +195,13 @@ class PoseGraphOptSLAM {
         /**
          * @brief The Back End: Uses the Edges/Constraints from the Front End to optimize
          *          the graph and return the corrected poses.
-         * 
-		 * @param odom Odometry reading (translation velocity & rotation velocity) 
 		 * 
          * @return ** void
          */
-		void Optimize(OdometryReadng odom);
+		void Optimize();
 
 
-        /**
-         * @brief Creates the H matrix and b vector for the Linear system
-         *          needed to minimize the error.
-         * 
-         * @param pose_i The ith Pose
-		 * @param pose_j The jth Pose
-		 * @param MeasuredTranslatedVector 
-		 * @param edge_covariance Covariance for the given ij Edge
-		 * @param odom Odometry reading (translation velocity & rotation velocity) 
-		 * 
-         * @return ** pair<Eigen::SparseMatrix<float, Eigen::RowMajor>, VectorXf> 
-		 * 				A pair containing the H Matrix and b vector.
-         */
-		pair<Eigen::SparseMatrix<float, Eigen::RowMajor>, VectorXf> BuildLinearSystem(
-				VectorXf pose_i, VectorXf pose_j, VectorXf MeasuredTranslatedVector, 
-				Eigen::SparseMatrix<float, Eigen::RowMajor> edge_covariance, OdometryReadng odom);		
-		
-
+        		
     public:
 
 		/**
@@ -204,29 +215,28 @@ class PoseGraphOptSLAM {
 		 *
 		 * @param max_nodes Maximum number of nodes allowed in the Pose Graph
 		 * @param pose_dimension The number of elements in the Pose Vector
-         * @param independent_val_num
 		 * @param guess_variation Variation around a given guess (used for the linearization of the error vector)
 		 *
          */
-        PoseGraphOptSLAM(int max_nodes, int pose_dimension, int independent_val_num, int guess_variation);
+        PoseGraphOptSLAM(int max_nodes, int pose_dimension, int guess_variation);
 
 
 		/**
 		 * @brief 
 		 * 
-		 * @param n_recent_poses 
-		 * @param closure_distance 
+		 * @param n_recent_poses The number/amount of most recent poses to store.
+		 * @param closure_distance The minimum distance between 2 poses required for loop closure
 		 */
 		void FrontEndInit(int n_recent_poses, float closure_distance);
 
 
         /**
-         * @brief Run the Pose Graph Optimization SLAM Algorithm.
+         * @brief Run the Pose Graph Optimization SLAM Algorithm for 1 iteration.
          * 
          * @param current_landmarks 
-         * @param odom 
+		 * @param currentPose 
          */
-        void Run(PointCloud current_landmarks, OdometryReadng odom);
+        void Run(PointCloud current_landmarks, VectorXf &currentPose);
 
 
 };
