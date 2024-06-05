@@ -8,17 +8,14 @@
 #include <cppad/cppad.hpp>
 
 #include "../FeatureExtraction/FeatureExtraction.hpp"
+#include "utils.hpp"
 
 using namespace CppAD;
 using namespace Eigen;
 using std::vector;
 
-struct OdometryReadng {
-	float RobotTranslation; 
-	float RobotRotation;
-};
 
-enum f_type {UPDATE, OBSERVATION};
+enum f_type {PREDICTION, OBSERVATION};
 
 // Why did I make these. What are they even from???????????????????????????????????????????????
 typedef struct state_vec StateVec;
@@ -29,20 +26,29 @@ typedef enum f_type FunctionType;
 class EKFSlam {
 
     private:
-        VectorXf StateVector; // The vector containing the current robot pose and all landmark positions.
-        Eigen::MatrixXf UpdateMappingFunction;
-		Eigen::MatrixXf ObservationMappingFunction;
-		Eigen::MatrixXf UpdateCovariance;
-		Eigen::MatrixXf ObservationCovariance;
-		Eigen::MatrixXf MotionCovariance;
+        FeatureExtractor feature_extractor;
+		
+		VectorXf StateVector; // The vector containing the current robot pose and all landmark positions.
+		std::vector<VectorXf> Landmarks;
+        Eigen::MatrixXf PredictionMappingFunction_F;
+		Eigen::MatrixXf ObservationMappingFunction_F;
+		Eigen::MatrixXf Covariance;
+		Eigen::MatrixXf ProcessNoiseCovariance_R;
+		Eigen::MatrixXf MeasurementCovariance_Q;
+		float process_uncertainty_r;
+		float measurement_uncertainty_q;
 		float time_interval;
 
 		// Dimensions
 		int PoseDimensions;
 		int LandmarkDimensions;
-		int NumOfLandmarks; // Number of Landmarks in the Map
+		int NumOfLandmarks; // current Number of Landmarks in the Map
+		int MaxLandmarks;
+		std::vector<Landmark> Correspondence;
+		float SimilarityMargin;
 
 		// 
+		Eigen::MatrixXf HighDimension_G;
 		Eigen::MatrixXf HighDimension_H;
 		Eigen::MatrixXf KalmanGain;
 		Eigen::MatrixXf Identity;
@@ -53,25 +59,68 @@ class EKFSlam {
 		std::vector<AD<float>> Yg;
 		std::vector<AD<float>> Xh;
 		std::vector<AD<float>> Yh;
-		ADFun<float> UpdateFunction;		
+		ADFun<float> PredictionFunction;		
 		ADFun<float> ObservationFunction;	
 
-		Landmark Correspondence[1000];
+
 
 		/**
-		 * @brief Updates the pose based on a given mathematical motion model / Update Function.
+		 * @brief Builds the INITIAL State Vector.
 		 *
-		 * @param MeasuredPose The Previous Pose, that the odometry commands will be applied to.
-		 * @param odom Odometry reading (translation velocity & rotation velocity) 
+		 * @return ** void 
+		 */
+		void Build_StateVector();
+
+
+		/**
+		 * @brief Builds the INITIAL Covariance Matrix.
+		 * 
+		 */
+		void Build_Covariance();
+
+
+		/**
+		 * @brief Builds the Process Noise and Measurement Noise covariance matrices
+		 * 
+		 */
+		void Build_NoiseCovariances();
+
+
+		/**
+		 * @brief Builds the Observation and Update mapping function matrices
+		 * 
+		 */
+		void Build_MappingFunctions();
+
+
+		/**
+		 * @brief Builds the Identity Matrix
+		 * 
+		 */
+		void Build_Identity();
+
+		/**
+		 * @brief Add a new landmark coordinates to the map (Increasing thre size of the state vector and all related matrices),
+		 * 			and add landmark to Correspondences.
+		 * 
+		 * @param landmark 
+		 * @return int 
+		 */
+		int UpdateMapAndResize(Landmark landmark);
+
+
+		/**
+		 * @brief Predicts the pose based on a given mathematical motion model / Update Function g().
+		 *
+		 * @param ctrl Odometry reading (translation velocity & rotation velocity) 
 		 *
 		 * @return ** VectorXf Updated Pose
 		 */
-		VectorXf UpdatePose(VectorXf MeasuredPose, OdometryReadng odom);
-
+		VectorXf PredictPose_g(ControlCommand ctrl);
 
 
 		/**
-		 * @brief Creates a Landmark Range & Bearing Estimation based on a given mathematical model / Observation Function.
+		 * @brief Creates a Landmark Range & Bearing Estimation based on a given mathematical model / Observation Function h().
 		 * 				|||  This function currently assumes a 2D pose and 2D landmark position.
 		 *
 		 * @param robot_pose_est Estimated Robot Pose (the output of the Update Pose function)
@@ -79,21 +128,16 @@ class EKFSlam {
 		 *
 		 * @return ** VectorXf Updated Landmark Data
 		 */
-		VectorXf GetEstimatedScan(VectorXf robot_pose_est, Point landmark_position_est);
-
+		VectorXf GetEstimatedLandmark_h(VectorXf robot_pose_est, Point landmark_position_est);
 
 
 		/**
-		 * * @brief Sets up the Update Function/Motion Model g() as a true set of equations 
+		 * * @brief Sets up the Prediction Function/Motion Model g() as a true set of equations 
 		 * 			with unknown independent variables for input into the Jacobian Matrix G.
-		 *
-		 * @param MeasuredPose The Previous Pose that the odometry commands will be applied to.
-		 * @param odom Odometry reading (translation velocity & rotation velocity) 
 		 *
 		 * @return ** void
 		 */
-		void BuildUpdateFunctionFor_G(VectorXf MeasuredPose, OdometryReadng odom);
-
+		void BuildPredictionFunctionFor_G();
 
 
 		/**
@@ -105,35 +149,15 @@ class EKFSlam {
 		void BuildObservationFunctionFor_H();
 
 
-        /**
+		/**
          * @brief Creates and solves the Jacobian for a given function.
          * 
          * @param f_type The function to create and solve a Jacobian for.
 		 * 					|||  UPDATE: Update Function, OBSERVATION: Observation Function
 		 * 
-		 * @param odom Odometry reading (translation velocity & rotation velocity) 
-		 * 
          * @return ** MatrixXf - Jacobian Matrix 
          */
-		MatrixXf CalculateJacobian(FunctionType f_type, OdometryReadng odom);
-	
-
-
-		/**
-		 * @brief Builds the initial State Vector and Covariance Matrix
-		 *
-		 * @param landmarks Current vector of Landmarks
-		 *
-		 * @return ** void 
-		 */
-		void BuildUpdateCovarianceAndStateVector(std::vector<VectorXf> landmarks);
-
-		/**
-		 * @brief Get the Current Pose From State Vector
-		 * 
-		 * @return ** VectorXf - The Current Pose
-		 */
-		VectorXf GetPoseFromStateVector();
+		MatrixXf CalculateJacobian(FunctionType f_type);
 
 
 		/**
@@ -142,11 +166,11 @@ class EKFSlam {
 		 *
 		 * @param current_pose The current Pose that will be updated while going through 
 		 * 						the Prediction Step
-		 * @param odom Odometry reading (translation velocity & rotation velocity) 
+		 * @param ctrl Odometry reading (translation velocity & rotation velocity) 
          * 
          * @return ** void 
          */
-        void Prediction(VectorXf current_pose, OdometryReadng odom);
+        void Prediction(VectorXf current_pose, ControlCommand ctrl);
 
 
 
@@ -155,29 +179,36 @@ class EKFSlam {
          *          a Kalman Gain weight factor applied to the given estimate.
 		 * 
 		 * @param current_scan The current range scan.
-		 * @param odom Odometry reading (translation velocity & rotation velocity) 
          * 
          * @return ** void 
          */
-        void Correction(std::vector<Landmark> current_scan, OdometryReadng odom);
+        void Correction(std::vector<Landmark> current_scan);
     
 	public:
+
+		/**
+		 * @brief Default constructor
+		 * 
+		 */
+		EKFSlam();
 
         /**
          * @brief Initialize an EKF Slam object
 		 *
-		 * @param initial_position Starting position of the robot
-		 * @param map A vector of all landmark (x, y) positions. Known or Unknown.
+		 * 
 		 * @param pose_dim Pose Dimensions
 		 * @param landmark_dim Landmark Dimensions
-		 * @param max_landmark_num Max Number of Landmarks
-		 * @param obs_covariance Observation Covariance Matrix
-		 * @param motion_covariance Expresses the uncertainty in the motion model.
          */
-        EKFSlam(Eigen::VectorXf initial_position, std::vector<VectorXf> map, 
-				int pose_dim, int landmark_dim, int max_landmark_num, 
-				Eigen::MatrixXf obs_covariance, Eigen::MatrixXf motion_covariance);
+        EKFSlam(int pose_dim, int landmark_dim);
 
+		/**
+		 * @brief Set the Initial State 
+		 * 
+		 * @param initial_position Starting position of the robot
+		 * @param _process_uncertainty_r A constant that corresponds to the non-zero diagonal components of R (dim = dim(pose))
+		 * @param _measurement_uncertainty_q A constant that corresponds to the non-zero components of Q (The uncertainty of each landmark)
+		 */
+		void SetInitialState(Eigen::VectorXf initial_position, float _process_uncertainty_r, float _measurement_uncertainty_q);
 
        
 		/**
@@ -185,9 +216,17 @@ class EKFSlam {
 		 * 
 		 * @param current_scan 
 		 * @param current_pose 
-		 * @param odom 
+		 * @param ctrl 
 		 */
-        void Run(std::vector<VectorXf> current_scan, VectorXf current_pose, OdometryReadng odom);
+        void Run(PointCloud current_scan, VectorXf current_pose, ControlCommand ctrl);
+
+
+		/**
+		 * @brief Set the landmark data if correspondences are known.
+		 * 
+		 * @param landmarks A vector of all known landmark (x, y) positions.
+		 */
+		void SetKnownLandmarks(std::vector<VectorXf> landmarks);
 };
 
 
