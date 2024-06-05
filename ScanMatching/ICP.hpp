@@ -1,13 +1,17 @@
+#pragma once
 #include <iostream>
 #include <vector>
 #include <cmath>
 #include <utility>
+#include <limits>
 
 #include </usr/include/eigen3/Eigen/Dense>
 #include </usr/include/eigen3/Eigen/SVD>
 #include </usr/include/eigen3/Eigen/QR>
 
 #include <cppad/cppad.hpp>
+#include "../Algos/kd_tree.hpp"
+#include "utils.hpp"
 
 using std::vector;
 using std::pair;
@@ -16,28 +20,17 @@ using Eigen::MatrixXf;
 using namespace::CppAD;
 using namespace::Eigen;
 
-struct PointCloud {
-	std::vector<VectorXf> Points;
-	std::vector<float> Weights;
-};
-
-struct RotationTranslation {
-	MatrixXf rotation_matrix;
-	VectorXf translation_vector;
-	VectorXf center_mass;
-	float weight;
-};
-
 class ICP {
 	
+	private:
+
 		int PoseDimension;
 		int ErrorParameterNum = 3;
 		std::vector<AD<float>> X; // X = (t_x, t_y, angle)
 		std::vector<AD<float>> Y;
 		ADFun<float> ErrorFunction;
-		float min_convergence_thresh;		
-
-	private:
+		float min_convergence_thresh;	
+		KDTree kd_tree;
 
 		/**
 		 * @brief Updates a given Point Cloud with the incremental result from the solution
@@ -64,7 +57,7 @@ class ICP {
 		/**
 		 * @brief Get the Error between the new and reference point
 		 * 
-		 * @param x Error function parameters (x, y, theta)
+		 * @param x Transformation parameters (x, y, theta) applied to 'reference point set' before its comparison to 'new point set'
 		 * @param ReferencePoint Point n from Reference Point Set
 		 * @param NewPoint Point n from New Point Set
 		 * @return ** VectorXf 
@@ -93,6 +86,24 @@ class ICP {
          */
 		MatrixXf CalculateJacobian(VectorXf ReferencePoint, VectorXf NewPoint); 
 
+		/**
+		 * @brief Calculate the root mean squared error between point sets.
+		 * 		This value is meant to be compared to the ICP Least Squares convergence threshold.
+		 * 
+		 * @param RefPointSet 
+		 * @param NewPointSet 
+		 * @return float RMS Error
+		 */
+		float Get_RootMeanSquaredError(PointCloud RefPointSet, PointCloud NewPointSet);
+
+		/**
+		 * @brief Calculate the Euclidean Distance between two points.
+		 * 
+		 * @param p 
+		 * @param q 
+		 * @return float 
+		 */
+		float Get_EuclideanDistance(VectorXf p, VectorXf q);
 
 		/**
 		 * @brief Calculate the Center of Mass for a given Point Cloud
@@ -104,7 +115,11 @@ class ICP {
 
 
 	public:
-	
+
+		/**
+		 * @brief Default constructor
+		 * **/	
+		ICP();
 
 		/**
 		 * @brief Initialize an Iterative Closest Point Algorithm Object.
@@ -130,25 +145,24 @@ class ICP {
 		/**
 		 * @brief Run Point Cloud Registration with Unkown Data Association.
 		 *
-		 * @param RefPointCloud New Point Cloud
+		 * @param RefPointCloud Reference Point Cloud
 		 * @param NewPointCloud New Point Cloud
 		 *
 		 * @return ** RotationTranslation
 		 */
-		RotationTranslation RunSVD(PointCloud RefPointCloud, PointCloud NewPointCloud);
+		RotationTranslation RunICP_SVD(PointCloud RefPointCloud, PointCloud NewPointCloud);
 
 		
 
 		/**
 		 * @brief Run Point Cloud Registration using a Non-Linear Least Squares apprroach.
 		 *
-		 * @param x Error function parameters (x, y, theta)
 		 * @param RefPointCloud Reference Point Cloud
 		 * @param NewPointCloud New Point Cloud
 		 * 
-		 * @return ** void
+		 * @return ** VectorXf updated rotation & translation parameters that minimize the error between clouds.
 		 */
-		void RunLeastSquares(VectorXf x, PointCloud RefPointCloud, PointCloud NewPointCloud);
+		VectorXf RunICP_LeastSquares(PointCloud RefPointCloud, PointCloud NewPointCloud);
 };
 
 
