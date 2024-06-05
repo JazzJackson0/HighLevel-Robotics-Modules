@@ -1,11 +1,10 @@
 #include "FeatureExtraction.hpp"
 
-
+// Private -------------------------------------------------------------------------------------------------------------------
 
 float FeatureExtractor::Get_EuclideanDistance(Point point_a, Point point_b) {
 
-    //return sqrt(pow((point_b.x - point_a.x), 2) + pow((point_b.y - point_a.y), 2));
-    return 5;
+    return sqrt(pow((point_b.x - point_a.x), 2) + pow((point_b.y - point_a.y), 2));
 }
 
 float FeatureExtractor::Get_Point2LineDistance(Point point, GeneralFormLine general_line) {
@@ -15,9 +14,9 @@ float FeatureExtractor::Get_Point2LineDistance(Point point, GeneralFormLine gene
 
 }
 
-vector<Point> FeatureExtractor::Get_2PointsFromLine(int x1, int x2, SlopeInterceptLine slope_line) {
+std::vector<Point> FeatureExtractor::Get_2PointsFromLine(int x1, int x2, SlopeInterceptLine slope_line) {
 
-    vector<Point> points;
+    std::vector<Point> points;
     Point point_a;
     Point point_b;
 
@@ -94,11 +93,13 @@ SlopeInterceptLine FeatureExtractor::General2SlopeInt(GeneralFormLine general_li
 Point FeatureExtractor::Get_Intersection(GeneralFormLine general_line_1, GeneralFormLine general_line_2) {
 
     Point point;
-    point.x = ((general_line_1.b * general_line_2.c) - (general_line_2.b * general_line_1.c)) / 
-        ((general_line_1.a * general_line_2.b) - (general_line_2.a * general_line_1.b));
-    point.y = ((general_line_2.a * general_line_1.c) - (general_line_1.a * general_line_2.c)) / 
-        ((general_line_1.a * general_line_2.b) - (general_line_2.a * general_line_1.b));
 
+    // Switched the subtraction order in the denominators so the sign of the output point match the actual point
+    point.x = ((general_line_1.b * general_line_2.c) - (general_line_2.b * general_line_1.c)) / 
+        ((general_line_2.a * general_line_1.b) - (general_line_1.a * general_line_2.b));
+    point.y = ((general_line_2.a * general_line_1.c) - (general_line_1.a * general_line_2.c)) / 
+        ((general_line_2.a * general_line_1.b) - (general_line_1.a * general_line_2.b));
+        
     return point;
 }
 
@@ -113,14 +114,17 @@ Point FeatureExtractor::AD2Position(float dist, float angle) {
     return point;
 }
 
+// Get rid of this function eventually. No longer neded
+std::vector<Point> FeatureExtractor::TransformScan(PointCloud scan) {
 
-vector<Point> FeatureExtractor::TransformScan(vector<VectorXf> scan) {
+    std::vector<Point> points;
 
-    vector<Point> points;
+    for (int n = 0; n < scan.points.size(); n++) {
 
-    for (int n = 0; n < scan.size(); n++) {
-
-        points.push_back(AD2Position(scan[n](0), scan[n](1)));
+        Point p;
+        p.x = scan.points[n][0];
+        p.y = scan.points[n][1];
+        points.push_back(p);
     }
 
     return points;
@@ -138,7 +142,7 @@ SlopeInterceptLine FeatureExtractor::CreateLinearModel(Point point_1, Point poin
 
 
 
-GeneralFormLine FeatureExtractor::ODRFit(vector<Point> laser_points) {
+GeneralFormLine FeatureExtractor::ODRFit(std::vector<Point> laser_points) {
 
     GeneralFormLine fit_line;
     fit_line.err = 0;
@@ -152,16 +156,21 @@ GeneralFormLine FeatureExtractor::ODRFit(vector<Point> laser_points) {
     fit_line.b = 0.0;
     fit_line.c = 0.0;
 
-    // Calculate mX & mY
+    
     for (int i = 0; i < N; i++) {
-
-        mX += laser_points[i].x / N;
-        mY += laser_points[i].y / N;
+        
+        // Calculate mX & mY
+        mX += laser_points[i].x;
+        mY += laser_points[i].y;
     }
 
-    // sXX, sYY & sXY
+    mX /= N;
+    mY /= N;
+
+
     for (int i = 0; i < N; i++) {
 
+        // sXX, sYY & sXY
         sXX = (laser_points[i].x - mX) * (laser_points[i].x - mX);
         sYY = (laser_points[i].y - mY) * (laser_points[i].y - mY);
         sXY = (laser_points[i].x - mX) * (laser_points[i].y - mY);
@@ -170,7 +179,7 @@ GeneralFormLine FeatureExtractor::ODRFit(vector<Point> laser_points) {
     if (sXY == 0) {
 
         // Vertical Line
-        if (sXX < sXY) {
+        if (sXX < sYY) {
 
             fit_line.a = 1;
             fit_line.b = 0;
@@ -178,7 +187,7 @@ GeneralFormLine FeatureExtractor::ODRFit(vector<Point> laser_points) {
         }
 
         // Horizontal Line
-        else if (sXX > sXY) {
+        else if (sXX > sYY) {
 
             fit_line.a = 0;
             fit_line.b = 1;
@@ -197,13 +206,15 @@ GeneralFormLine FeatureExtractor::ODRFit(vector<Point> laser_points) {
    
     else {
 
-        float slope = mY - (fit_line.b * mX);
-        float intercept = sYY - sXX + sqrt(pow((sYY - sXX), 2) + (4 * (sXY * sXY))) / (2 * sXY);
-        float norm_factor = (intercept >= 0.0? 1.0 : -1.0) * sqrt((slope * slope) + 1);
+        // General Line Output
+        
+        float  slope_m = sYY - sXX + sqrt(pow((sYY - sXX), 2) + (4 * (sXY * sXY))) / (2 * sXY);
+        float intercept_b = mY - (slope_m * mX);
+        float norm_factor = (intercept_b >= 0.0? 1.0 : -1.0) * sqrt((slope_m * slope_m) + 1);
 
-        fit_line.a = (-slope / norm_factor);
+        fit_line.a = (-slope_m / norm_factor);
         fit_line.b = (1.0 / norm_factor);
-        fit_line.c = (intercept / norm_factor);
+        fit_line.c = (intercept_b / norm_factor);
     }
 
 
@@ -221,31 +232,13 @@ Point FeatureExtractor::Get_PointPrediction(GeneralFormLine fitted_line, Point p
 }
 
 
-vector<Point> FeatureExtractor::Get_Endpoints(GeneralFormLine line, Point point_a, Point point_b) {
+std::vector<Point> FeatureExtractor::Get_Endpoints(GeneralFormLine line, Point point_a, Point point_b) {
 
-    vector<Point> endpoints;
+    std::vector<Point> endpoints;
     endpoints.push_back(OrthogProjectPoint2Line(General2SlopeInt(line), point_a));
     endpoints.push_back(OrthogProjectPoint2Line(General2SlopeInt(line), point_b));
 
     return endpoints;
-}
-
-
-Landmark FeatureExtractor::ValidationGate(LineSegment feature) {
-
-    Landmark validated;
-    validated.err = 0;
-     
-    // If Validated
-    if (1 /*Nothing to Validate right now*/) {
-        validated.points = feature.points;
-        validated.line = feature.line_fit;
-        validated.id = LandmarkIDs++;
-        return validated;
-    }
-    
-    validated.err = 1;
-    return validated;
 }
 
 Point FeatureExtractor::OrthogProjectPoint2Line(SlopeInterceptLine slope_line, Point data_point) {
@@ -294,56 +287,256 @@ void FeatureExtractor::CheckOverlap() {
     }
 }
 
+LineSegment FeatureExtractor::DetectSeedSegment() {
 
-void FeatureExtractor::reinit() {
+    // std::cout << "Num of Points: " << num_of_points << std::endl;
+    // std::cout << "Min Seed Seg Num: " << MinSeedSegNum << std::endl;
+    std::cout << "Detecting Seed Segment----------------------------------------------" << std::endl;
+    
+    LineSegment seed_seg;
+    seed_seg.err = 0;
+
+    // Slide seed segment window
+    for (int i = breakpoint_idx; i < (LaserPoints.size() - MinSeedSegNum); i++) {
+        bool flag = true;
+
+        seed_seg.start_idx = i;
+        seed_seg.end_idx = i + SeedSegWindowSize;
+
+        // Update the sliding window
+        std::vector<Point> sliding_window;
+        for (int pos = seed_seg.start_idx; pos < seed_seg.end_idx; pos++) {
+            sliding_window.push_back(LaserPoints[pos]);
+        }
+        seed_seg.points = sliding_window;
+        seed_seg.line_fit = ODRFit(seed_seg.points);
+        //std::cout << "Fit Line (During Detection): " << seed_seg.line_fit.a << "A + " << seed_seg.line_fit.b << "B + " << seed_seg.line_fit.c << "C" << std::endl;
+
+        // Validate the seed segment window
+        for (int k = i; k < seed_seg.end_idx; k++) {
+
+            Point predicted = Get_PointPrediction(seed_seg.line_fit, LaserPoints[k]);
+            // std::cout << "Laser Point: (" << LaserPoints[k].x << ", " << LaserPoints[k].y << ") Predicted Point: (" 
+            //     << predicted.x << ", " << predicted.y << ")" << std::endl;
+            float dist1 = Get_EuclideanDistance(predicted, LaserPoints[k]); 
+            //std::cout << "Distance btw Point & Predicted: " << dist1 << " Delta: " << Delta << std::endl;           
+            if (dist1 > Delta) {
+                flag = false;
+                break;
+            }
+
+            float dist2 = Get_Point2LineDistance(LaserPoints[k], seed_seg.line_fit);
+            //std::cout << "Distance btw Point & Fit Line: " << dist2 << " Epsillon: " << Epsillon << std::endl; 
+            if (dist2 > Epsillon) {
+                flag = false;
+                break;
+            }
+        }
+
+        if (flag) {
+            std::cout << "Seed Seg Size (During Detection): " << seed_seg.points.size() << std::endl;
+            return seed_seg;
+        }
+    }
+
+    seed_seg.err = 1;
+    std::cout << "Error Segment Returned (During Detection): " << seed_seg.points.size() << std::endl;
+    return seed_seg;
+}
+
+
+LineSegment FeatureExtractor::GrowSeedSegment(LineSegment seed_seg) {
+
+    std::cout << "Growing Seed Segment---------------------------------------------" << std::endl;
+    
+    int beginning_point_index = max(breakpoint_idx, seed_seg.start_idx - 1);
+    int final_point_index = min(seed_seg.end_idx + 1, LaserPoints.size() - 1);
+    //std::cout << "P_b: " << beginning_point_index << " P_f: " << final_point_index << std::endl;
+    //std::cout << "Seed Seg Start: " << seed_seg.start_idx - 1 <<  " Breakpoint: " << breakpoint_idx << std::endl;
+    GeneralFormLine refit;
+    LineSegment error;
+    error.err = 0;
+
+    if (seed_seg.err == 1) {
+        std::cout << "No Seed Segment Detected. Cannot Grow" << std::endl;
+        error.err = 1;
+        return error;
+    }
+
+    std::cout << "Growing Right" << std::endl;
+    // Grow Right
+    while (Get_Point2LineDistance(LaserPoints[final_point_index], seed_seg.line_fit) < Epsillon) {
+        // std::cout << "[RIGHT] Point-2-FitLine Dist: " << Get_Point2LineDistance(LaserPoints[final_point_index], seed_seg.line_fit) << "m   e = " << Epsillon << std::endl;
+
+        if (final_point_index >= LaserPoints.size()) 
+            break;
+        
+        // Check for doors, windows and other other gaps
+        if (Get_EuclideanDistance(LaserPoints[final_point_index], LaserPoints[final_point_index - 1]) > GapValue) {
+            break;
+        }
+
+        // Refit line w/ new point Pf
+        else {
+            seed_seg.points.push_back(LaserPoints[final_point_index]);
+            seed_seg.line_fit = ODRFit(seed_seg.points);
+            //std::cout << "[RIGHT] New Fit Made. Seg Size: " << seed_seg.points.size() << std::endl;
+        }
+        final_point_index++;
+  
+    }
+
+    final_point_index--;
+    
+    std::cout << "Growing Left" << std::endl;
+    // Grow Left
+    while (Get_Point2LineDistance(LaserPoints[beginning_point_index], seed_seg.line_fit) < Epsillon) {
+        
+        // std::cout << "[LEFT] Point-2-FitLine Dist: " << Get_Point2LineDistance(LaserPoints[beginning_point_index], seed_seg.line_fit) << "m   e = " << Epsillon << std::endl;
+
+        if (beginning_point_index < 0)
+            break;
+
+        // Check for doors, windows and other other gaps
+        if (Get_EuclideanDistance(LaserPoints[beginning_point_index], LaserPoints[beginning_point_index + 1]) > GapValue) {
+            break;
+        }
+
+        // Refit line w/ new point Pb
+        else {
+
+            // Create subset from Pb to Pf
+            std::vector<Point> subset;
+            for (int i = beginning_point_index; i <= final_point_index; i++)
+                subset.push_back(LaserPoints[i]);
+
+            refit = ODRFit(subset);
+            seed_seg.points = subset;
+            seed_seg.line_fit = refit;
+            //std::cout << "[LEFT] New Fit Made. Seg Size: " << seed_seg.points.size() << std::endl;
+        }
+        beginning_point_index--;
+        
+        
+    }
+    beginning_point_index++;
+    
+    
+    seed_seg.start_idx = 0;
+    seed_seg.end_idx = seed_seg.points.size() - 1;
+
+    // std::cout << "Start Index: " << seed_seg.start_idx << " End Index: " << seed_seg.end_idx << std::endl;
+    // std::cout << "Start: (" << seed_seg.points[seed_seg.start_idx].x << ", " << seed_seg.points[seed_seg.start_idx].y 
+    //     <<") End: (" << seed_seg.points[seed_seg.end_idx].x << ", " << seed_seg.points[seed_seg.end_idx].y << ")" << std::endl;
+
+    // Validate Seed Segment
+    int line_seg_point_num = seed_seg.points.size();
+    float line_seg_len = Get_EuclideanDistance(seed_seg.points[seed_seg.start_idx], seed_seg.points[seed_seg.end_idx]);
+
+    // std::cout << "Num Points: " << line_seg_point_num << " Seed Line Len: " << line_seg_len << std::endl;
+    if (line_seg_point_num >= MinSeedSegNum && line_seg_len >= MinLineSegLen) {
+
+        breakpoint_idx = min(final_point_index + 1, LaserPoints.size());
+        std::cout << "Seed Seg Size (After Growth): " << seed_seg.points.size() << std::endl;
+        seed_seg.endpoints = Get_Endpoints(seed_seg.line_fit, seed_seg.points[seed_seg.start_idx], seed_seg.points[seed_seg.end_idx]);
+        return seed_seg;
+    }
+
+    error.err = 1;
+    std::cout << "About to return Error Segment (After Growth)" << std::endl;
+    return error;
+}
+
+
+
+Landmark FeatureExtractor::ValidationGate(LineSegment feature) {
+
+    Landmark validated;
+    validated.err = 0;
+
+    if (feature.err == 1) {
+        validated.err = 1;
+        return validated;
+    }
+    
+     
+    // If Validated
+    if (1 /*Nothing to Validate right now*/) {
+        validated.points = feature.points;
+        validated.line = feature.line_fit;
+        return validated;
+    }
+    
+    validated.err = 1;
+    return validated;
+}
+
+
+void FeatureExtractor::reset() {
 
     AllLandmarks.clear();
     NewLandmarks.clear();
     LaserPoints.clear();
     //PredictedPoints.clear();
-    CurrentPointsInLineSeg = 0;
+    SeedSegWindowSize = 15;
+    MinLineSegLen = 0.001; // m (Very small length for test case)
     breakpoint_idx = 0;
 }
 
-// Public------------------------------------------------------------------------------------------------
+
+// Public---------------------------------------------------------------------------------------------------------------------------------------
 FeatureExtractor::FeatureExtractor(){
 
 };
 
 
-FeatureExtractor::FeatureExtractor(float delta, float epsillon, int min_seed_seg_num) {
+FeatureExtractor::FeatureExtractor(float delta, float epsillon, float gap_value, int min_seed_seg_num)
+    : Delta(delta), Epsillon(epsillon), GapValue(gap_value), MinSeedSegNum(min_seed_seg_num) {
 
     LandmarkIDs = 0;
-    Delta = delta;
-    Epsillon = epsillon; 
-    MinSeedSegNum = min_seed_seg_num;
-    CurrentPointsInLineSeg = 0;
+    SeedSegWindowSize = 15; 
+    MinLineSegLen = 0.001; // m (Very small length for test case)
     breakpoint_idx = 0;
 }
 
 
-vector<Landmark> FeatureExtractor::LandmarksFromScan(vector<VectorXf> current_scan) {
+std::vector<Landmark> FeatureExtractor::LandmarksFromScan(PointCloud current_scan, VectorXf current_pose) {
+    
+    if (current_scan.points.size() == 0) {
+        return AllLandmarks;
+    }
 
-    reinit();
-    int num_of_points = current_scan.size();
+    reset();
     LaserPoints = TransformScan(current_scan);
     LineSegment line_seg;
     Landmark landmark;
+    RobotPos.x = current_pose[0];
+    RobotPos.y = current_pose[1];
+    RobotPos.angle = current_pose[2];
 
-    while (breakpoint_idx < (num_of_points - MinSeedSegNum)) {
+    while (breakpoint_idx < (LaserPoints.size() - MinSeedSegNum)) {
 
-        CurrentPointsInLineSeg = 0;
-        landmark = ValidationGate(GrowSeedSegment(DetectSeedSegment(num_of_points)));
+        std::cout << "\n";
+        
+        landmark = ValidationGate(GrowSeedSegment(DetectSeedSegment()));
 
-        Point origin;
-        origin.x = 0;
-        origin.y = 0;
-        origin.angle = 0;
-        landmark.position = OrthogProjectPoint2Line(General2SlopeInt(landmark.line), origin);
-        NewLandmarks.push_back(landmark);
+        // If landmark is valid
+        if (landmark.err == 0) {
+            
+            Point origin;
+            origin.x = 0;
+            origin.y = 0;
+            origin.angle = 0;
+            landmark.position = OrthogProjectPoint2Line(General2SlopeInt(landmark.line), origin);
+            NewLandmarks.push_back(landmark);
 
-        landmark.range = Get_EuclideanDistance(RobotPos, landmark.position);
-        landmark.bearing = atan2(landmark.position.y, landmark.position.x) - RobotPos.angle;
+            landmark.range = Get_EuclideanDistance(RobotPos, landmark.position);
+            landmark.bearing = atan2(landmark.position.y, landmark.position.x) - RobotPos.angle;
+
+            std::cout << "NEW LANDMARK!!!!!!!!!!!!" << std::endl;
+            std::cout << "Position: " << landmark.position.x << ", " << landmark.position.y  << std::endl;
+            std::cout << "Line: " << landmark.line.a << "A + " << landmark.line.b << "B + " << landmark.line.c << "C" << std::endl;
+        }
     }
 
     CheckOverlap();
@@ -351,131 +544,6 @@ vector<Landmark> FeatureExtractor::LandmarksFromScan(vector<VectorXf> current_sc
     return AllLandmarks;
 }
 
-
-LineSegment FeatureExtractor::DetectSeedSegment(int num_of_points) {
-
-    bool flag = false;
-    LineSegment seed_seg;
-    seed_seg.err = 0;
-    seed_seg.start_idx = breakpoint_idx;
-
-    for (int i = seed_seg.start_idx; i < (num_of_points - MinSeedSegNum); i++) {
-
-        seed_seg.end_idx = i + CurrentPointsInLineSeg;
-        
-        seed_seg.line_fit = ODRFit(LaserPoints);
-
-        for (int k = i; k < seed_seg.end_idx; k++) {
-
-            Point predicted = Get_PointPrediction(seed_seg.line_fit, LaserPoints[k]);
-            float dist1 = Get_EuclideanDistance(predicted, LaserPoints[k]);            
-            if (dist1 > Delta) {
-                flag = false;
-                break;
-            }
-
-            float dist2 = Get_Point2LineDistance(LaserPoints[k], seed_seg.line_fit);
-            if (dist2 > Epsillon) {
-                flag = false;
-                break;
-            }
-
-            seed_seg.points.push_back(LaserPoints[k]);
-            CurrentPointsInLineSeg++;
-            //PredictedPoints.push_back(predicted);
-        }
-
-        if (flag) {
-            
-            return seed_seg;
-        }
-    }
-
-    seed_seg.err = 1;
-    return seed_seg;
-}
-
-
-LineSegment FeatureExtractor::GrowSeedSegment(LineSegment seed_seg) {
-
-    int line_seg_len = 0;
-    int beginning_point_index = max(breakpoint_idx, seed_seg.start_idx - 1);
-    int final_point_index = min(seed_seg.end_idx + 1, LaserPoints.size());
-    GeneralFormLine refit;
-    LineSegment error;
-    error.err = 0;
-
-    while (Get_Point2LineDistance(LaserPoints[final_point_index], seed_seg.line_fit) < Epsillon) {
-
-        if (final_point_index > CurrentPointsInLineSeg) 
-            break;
-
-        // Refit Line with the new point Pf
-        else {
-            
-            // Create subset from Pb to Pf
-            vector<Point> subset;
-            for (int i = beginning_point_index; i <= final_point_index; i++)
-                subset.push_back(LaserPoints[i]);
-
-            refit = ODRFit(subset);
-        }
-        final_point_index++;
-        
-        // Check for doors, windows, etc
-        if (Get_EuclideanDistance(LaserPoints[final_point_index], LaserPoints[final_point_index - 1]) > GapValue)
-            break;
-    }
-
-    final_point_index--;
-    
-
-
-    while (Get_Point2LineDistance(LaserPoints[beginning_point_index], seed_seg.line_fit) < Epsillon) {
-
-        if (beginning_point_index < 1)
-            break;
-
-        else {
-
-            // Create subset from Pb to Pf
-            vector<Point> subset;
-            for (int i = beginning_point_index; i <= final_point_index; i++)
-                subset.push_back(LaserPoints[i]);
-
-            refit = ODRFit(subset);
-        }
-        beginning_point_index--;
-        
-        if (Get_EuclideanDistance(LaserPoints[beginning_point_index], LaserPoints[beginning_point_index + 1]) > GapValue)
-            break;
-    }
-    beginning_point_index++;
-
-
-    // Create Final Line
-    vector<Point> subset;
-    for (int i = beginning_point_index; i <= final_point_index; i++)
-        subset.push_back(LaserPoints[i]);
-    
-    // Turn Seed Segment into the grown Line Segment
-    seed_seg.points = subset;
-    seed_seg.line_fit = refit;
-    seed_seg.start_idx = beginning_point_index;
-    seed_seg.end_idx = final_point_index;
-
-    CurrentPointsInLineSeg = subset.size();
-    line_seg_len = Get_EuclideanDistance(LaserPoints[beginning_point_index], LaserPoints[final_point_index]);
-
-    if (CurrentPointsInLineSeg <= MinLineSegNum && line_seg_len <= MinLineSegLen) {
-
-        breakpoint_idx = min(final_point_index + 1, LaserPoints.size());
-        return seed_seg;
-    }
-
-    error.err = 1;
-    return error;
-}
 
 
 void FeatureExtractor::Set_Delta(float delta) {
@@ -502,12 +570,6 @@ void FeatureExtractor::Set_MinSeedSegNum(int min_seed_seg_num) {
 }
 
 
-void FeatureExtractor::Set_MinLineSegNum(int min_line_seg_num) {
-
-    MinLineSegNum = min_line_seg_num;
-}
-
-
 void FeatureExtractor::Set_MinLineSegLen(float min_line_seg_len) {
 
     MinLineSegLen = min_line_seg_len;
@@ -519,9 +581,9 @@ void FeatureExtractor::Set_MinLineSegLen(float min_line_seg_len) {
 /*
  * 			TO-DO
  * 			-----
- *  - Completely Untested. Not sure if I should return pointers or not.
+ *  - 
  *
- *  - Test Code
+ *  - 
  *  
  *  - 
  *  */
