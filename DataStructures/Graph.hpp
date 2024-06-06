@@ -125,6 +125,15 @@ class Graph {
 
 
         /**
+         * @brief 
+         * 
+         * @param index 
+         * @return Z 
+         */
+        Z Get_EdgeByIndex(int index);
+
+
+        /**
          * @brief Returns one of the vertices adjacent (as specified by the adjacent_id) to 'vertex_id' 
          * 
          * @param vertex_id 
@@ -329,6 +338,14 @@ std::pair<int, int> Graph<T, Z>::Get_EdgeEnds(int edge_idx) {
     return std::make_pair(Edges[edge_idx].vertexA, Edges[edge_idx].vertexB);
 
 }
+
+template <typename T, typename Z>
+Z Graph<T, Z>::Get_EdgeByIndex(int index) {
+
+    return Edges[index].weight;
+}
+
+
 
 template <typename T, typename Z>
 T Graph<T, Z>::Get_AdjacentVertex(int vertex_id, int adjacent_id) {
