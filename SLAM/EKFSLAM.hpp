@@ -157,7 +157,7 @@ class EKFSlam {
 		 * 
          * @return ** MatrixXf - Jacobian Matrix 
          */
-		MatrixXf CalculateJacobian(FunctionType f_type);
+		MatrixXf CalculateJacobian(FunctionType f_type, int landmark_location);
 
 
 		/**

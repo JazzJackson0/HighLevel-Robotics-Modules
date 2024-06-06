@@ -210,13 +210,17 @@ void EKFSlam::BuildObservationFunctionFor_H() {
 
 	AD<float> DiffX = Xh[3] - Xh[0];
 	AD<float> DiffY = Xh[4] - Xh[1];
+	
+	// Supposedly temporary values.
+	// TODO: Verify that this crap is indeed temporary, or what even 'temporary' means. Check the Jacobian output
+	AD<float> supposedly_temporary1 = CppAD::sin(DiffY);
+	AD<float> supposedly_temporary2 = CppAD::cos(DiffX);
 
 	// Set up your functions that will be Auto-Differentiated
 	// Differentiate w.r.t.: X[0] = pose_estimate_x, X[1] = pose_estimate_y, X[2] = pose_estimate_theta, X[3] = landmark_estimate_x, X[4] = landmark_estimate_y 
-	//Yh[0] = CppAD::sqrt( CppAD::pow(DiffX, 2) + CppAD::pow(DiffY, 2) );
-	Yh[0] = CppAD::sqrt( (DiffX * DiffX) + (DiffY * DiffY) );
-	//Yh[1] = CppAD::atan2(DiffY, DiffX) - Xh[2];
-	Yh[1] = (DiffY, DiffX) - Xh[2];
+	Yh[0] = CppAD::sqrt( CppAD::pow(DiffX, 2) + CppAD::pow(DiffY, 2) );
+	Yh[1] = CppAD::atan2(supposedly_temporary1, supposedly_temporary2) - Xh[2]; 
+	//NOTE: Yh[1] = CppAD::atan2(DiffY, DiffX) - Xh[2]; // What the formula Should Actually be!!!! But CppAD::atan2() is bullshit
 
 	// Creates f: x -> y and stops tape recording
 		// Performs the derivative calculations on the empty x variables.
@@ -225,11 +229,21 @@ void EKFSlam::BuildObservationFunctionFor_H() {
 
 
 
-MatrixXf EKFSlam::CalculateJacobian(FunctionType f_type) {
+MatrixXf EKFSlam::CalculateJacobian(FunctionType f_type, int landmark_location) {
 	
 	int JacobianParameterDimension; //(i.e. w.r.t)
 
 	VectorXf robot_pose = StateVector.block(0, 0, PoseDimensions, 1);
+	VectorXf landmark;
+	VectorXf g_inputs(PoseDimensions);
+	VectorXf h_inputs(PoseDimensions + LandmarkDimensions);
+	if (landmark_location >= 0) {
+		landmark = StateVector.block(landmark_location, 0, LandmarkDimensions, 1);
+		h_inputs << robot_pose, landmark;
+	}
+
+	g_inputs << robot_pose;
+
 
 	// STEP 1: Set Up Prediction Function----------------------------------------------
 	if (f_type == PREDICTION) {
@@ -251,9 +265,6 @@ MatrixXf EKFSlam::CalculateJacobian(FunctionType f_type) {
 	// Holds the value of the corresponding Independent Variable's index.
 	// (e.g., 0 = X[0], 1 = X[1], etc.)
 	std::vector<float> WithRespectTo(JacobianParameterDimension);
-	for (size_t i = 0; i < JacobianParameterDimension; i++) {
-		WithRespectTo[i] = (float) i;
-	}
 		
 	// Compute the Jacobian***********
 	std::vector<float> jac;
@@ -261,12 +272,22 @@ MatrixXf EKFSlam::CalculateJacobian(FunctionType f_type) {
 	Jac = MatrixXf::Zero(1, 1); // Just dummy initialization
 
 	if (f_type == PREDICTION) {
+
+		for (size_t i = 0; i < JacobianParameterDimension; i++) {
+			WithRespectTo[i] = g_inputs[i];
+		}
+
 		jac.resize(PoseDimensions * JacobianParameterDimension);
 		jac = PredictionFunction.Jacobian(WithRespectTo);
 		Jac = MatrixXf::Zero(PoseDimensions, JacobianParameterDimension);
 	}
 	
 	if (f_type == OBSERVATION) {
+
+		for (size_t i = 0; i < JacobianParameterDimension; i++) {
+			WithRespectTo[i] = h_inputs[i];
+		}
+
 		jac.resize(LandmarkDimensions * JacobianParameterDimension);
 		jac = ObservationFunction.Jacobian(WithRespectTo);
 		Jac = MatrixXf::Zero(LandmarkDimensions, JacobianParameterDimension);
@@ -299,7 +320,7 @@ void EKFSlam::Prediction(VectorXf current_pose, ControlCommand ctrl) {
 	
 	// STEP 2: Update Covariance Matrix -----------------	
 	// Take Jacobian of your Motion Model g()
-	Eigen::MatrixXf G = CalculateJacobian(PREDICTION);
+	Eigen::MatrixXf G = CalculateJacobian(PREDICTION, -1);
 
 	// Build High-Dimension G
 	int LandmarkDim_X_N = (LandmarkDimensions * NumOfLandmarks);
@@ -331,12 +352,13 @@ void EKFSlam::Correction(std::vector<Landmark> landmarks) {
 		VectorXf estimated_landmark = GetEstimatedLandmark_h(predicted_pose, global_landmark.position);
 
 		// STEP 2: Compute Jacobian of Observation function h() - H -----------------
-		Eigen::MatrixXf H = CalculateJacobian(OBSERVATION);
+		int landmark_location = PoseDimensions + (global_landmark.id * LandmarkDimensions); // Generic formula for getting correct column index from landmark id.
+		Eigen::MatrixXf H = CalculateJacobian(OBSERVATION, landmark_location);
 
 			// Update mapping function for landmark j	
 		MatrixXf identity(LandmarkDimensions, LandmarkDimensions);
 		identity.setIdentity();
-		int landmark_location = PoseDimensions + (global_landmark.id * LandmarkDimensions); // Generic formula for getting correct column index from landmark id.
+		
 		MatrixXf CurrentObservationMappingFunction_F = ObservationMappingFunction_F;
 		CurrentObservationMappingFunction_F.block(PoseDimensions, landmark_location, LandmarkDimensions, LandmarkDimensions) = identity;
 
