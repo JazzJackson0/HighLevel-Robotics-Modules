@@ -7,6 +7,11 @@
 using std::pair;
 using namespace Eigen;
 
+struct ControlCommand {
+	float trans_vel; 
+	float rot_vel;
+};
+
 typedef pair<float, VectorXf> AngleAndAxis;
 
 
