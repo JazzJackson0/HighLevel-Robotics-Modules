@@ -86,8 +86,6 @@ void PoseGraphOptSLAM::AddPoseToGraph(Pose pose, PoseEdge edge) {
 		DiagonalMatrix<float, Eigen::Dynamic, Eigen::Dynamic> covariance(3);
 		covariance.diagonal().setConstant(0.01);
 		edge.NoiseInfoMatrix = MatrixXf(covariance).inverse();
-		std::cout << "New Edge Info Matrix!!!: Rows: " <<  edge.NoiseInfoMatrix.rows() << " Cols: " << edge.NoiseInfoMatrix.cols() << std::endl;
-
 	}
 
 	// Add Pose to Graph
@@ -143,7 +141,6 @@ bool PoseGraphOptSLAM::CheckForLoopClosure(Pose pose) {
 		DiagonalMatrix<float, Eigen::Dynamic, Eigen::Dynamic> covariance(3);
 		covariance.diagonal().setConstant(0.01);
 		closure_edge.NoiseInfoMatrix = MatrixXf(covariance).inverse();
-		std::cout << "New Edge Info Matrix!!!: Rows: " <<  closure_edge.NoiseInfoMatrix.rows() << " Cols: " << closure_edge.NoiseInfoMatrix.cols() << std::endl;
 		Pose_Graph.Add_Edge(Pose_Graph.Get_NumOfVertices() - 1, closest_vertex_idx, closure_edge);
 		return true;
 	}
@@ -212,10 +209,12 @@ void PoseGraphOptSLAM::Build_ErrorFunction() {
 }
 
 
-HbResults PoseGraphOptSLAM::Build_LinearSystem(VectorXf pose_i, 
-	VectorXf pose_j, VectorXf MeasuredTranslatedVector, MatrixXf edge_covariance) {
+HbResults PoseGraphOptSLAM::Build_LinearSystem(VectorXf pose_i, VectorXf pose_j, 
+	VectorXf MeasuredTranslatedVector, MatrixXf edge_covariance) {
 	
 	HbResults result;
+	VectorXf current_posei_posej(PoseDimensions * 2);
+	current_posei_posej << pose_i, pose_j;
 
 	// STEP 1: Set Up Error Function----------------------------------------------
 	Build_ErrorFunction();	
@@ -228,7 +227,8 @@ HbResults PoseGraphOptSLAM::Build_LinearSystem(VectorXf pose_i,
 	// (e.g., 0 = X[0], 1 = X[1], etc.)
 	ValueVector WithRespectTo(PoseDimensions * 2);
 	for (size_t i = 0; i < (PoseDimensions * 2); i++) {
-		WithRespectTo[i] = (float) i;
+		//WithRespectTo[i] = (float) i;
+		WithRespectTo[i] = current_posei_posej[i];
 	}
 
 	// Set up Sparsity Pattern********** Pattern For R (Where J(x) = F(x) * R)
@@ -260,7 +260,7 @@ HbResults PoseGraphOptSLAM::Build_LinearSystem(VectorXf pose_i,
 	// Set up Sparse Matrix***********
 	// Specifies which elements of the Jacobian are computed
 	sparse_rcv<SizeVector, ValueVector> SparseMatrix(JacobianSparsityPattern);
-		
+
 	// Compute the Sparse Jacobian***********
 	CppAD::sparse_jac_work Work; // Stores Information used to reduce computation for future calls. 
 	size_t ColorsPerGroup = 2; // The number of colors to undergo the [forward mode auto-diff process] At The Same Time.
@@ -273,10 +273,10 @@ HbResults PoseGraphOptSLAM::Build_LinearSystem(VectorXf pose_i,
 	CppAD::sparse2eigen(SparseMatrix, Jac);
 
 	// Result: Jac is a 3 x 6 Matrix (3 functions, 6 Independent variables)
-	std::cout << "Jac Rows: " << Jac.rows() << std::endl;
-	std::cout << "Jac Cols: " << Jac.cols() << std::endl;
-	std::cout << "Cov Rows: " << edge_covariance.rows() << std::endl;
-	std::cout << "Cov Cols: " << edge_covariance.cols() << std::endl;
+	// std::cout << "Jac Rows: " << Jac.rows() << std::endl;
+	// std::cout << "Jac Cols: " << Jac.cols() << std::endl;
+	// std::cout << "Cov Rows: " << edge_covariance.rows() << std::endl;
+	// std::cout << "Cov Cols: " << edge_covariance.cols() << std::endl;
 
 	// STEP 3: Create the H Matrix & b vector -----------------
 
@@ -366,11 +366,9 @@ void PoseGraphOptSLAM::Optimize() {
 
 			std::cout << "Edge i Index: " << edge_index_i << " Edge j Index: " << edge_index_j << " Graph Size: " << Pose_Graph.Get_NumOfVertices() << "\n";
 
-			VectorXf pose_i = Pose_Graph.Get_Vertex(edge_index_i).pose;
-			//std::cout << "Pose i Size: " << pose_i.rows() << "\n";	
+			VectorXf pose_i = Pose_Graph.Get_Vertex(edge_index_i).pose;	
 			VectorXf pose_j = Pose_Graph.Get_Vertex(edge_index_j).pose;
-			PoseEdge edge = Pose_Graph.Get_AdjacentEdge(edge_index_i, edge_index_j);
-			//std::cout << "Matrix Rows: " << edge.TransformationMatrix.rows() << " Matrix Cols: " << edge.TransformationMatrix.cols() << "\n";
+			PoseEdge edge = Pose_Graph.Get_EdgeByIndex(n);
 			VectorXf cleaned_pose_i(3);
 			cleaned_pose_i << pose_i[0], pose_i[1], 1;
 			VectorXf translated_vector = edge.TransformationMatrix * cleaned_pose_i;
@@ -386,8 +384,8 @@ void PoseGraphOptSLAM::Optimize() {
 			coeffVector_b.block<3, 1>(edge_index_i, 0) = temp_result.bi; 
 			coeffVector_b.block<3, 1>(edge_index_j, 0) = temp_result.bj; 
 
-			std::cout << "Hessian: " << "\n" << SparseHessian << "\n";
-			std::cout << "b Vector: " << "\n" << coeffVector_b << "\n";
+			// std::cout << "Hessian: " << "\n" << SparseHessian << "\n";
+			// std::cout << "b Vector: " << "\n" << coeffVector_b << "\n";
 		}
 		
 
