@@ -5,30 +5,26 @@
 #include <time.h>
 #include <vector>
 #include <cmath>
+#include "utils.hpp"
+#include </usr/include/eigen3/Eigen/Dense>
+#include "/usr/include/eigen3/unsupported/Eigen/CXX11/Tensor"
 using std::vector;
 using std::pair;
 using std::make_pair;
+using namespace Eigen;
+
+
 
 struct Particle {
-	vector<float> Pose;
+	VectorXf pose;
 	float weight;
-};
-
-struct OdometryReadng {
-	float RobotTranslation; 
-	float RobotRotation;
-};
-
-struct Scan {
-	float range;
-	float bearing;
 };
 
 
 class ParticleFilter {
 
     private:
-		vector<Particle> ParticleSet;
+		std::vector<Particle> ParticleSet;
 		float MaxBeamDist;
 		float AngularBeamWidth;
 		int MaxParticles;
@@ -41,20 +37,29 @@ class ParticleFilter {
 		float bearing_sigma = 0.5; // Standard Deviation for the Bearing
 		
 		// Map
-		float **Map;
+		Eigen::Tensor<float, 2> Map;
 		int MapWidth;
 		int MapHeight;
         
 
 		/**
-		 * @brief Look throuch each occupied cell in the map and determine if it falls within the range & bounds of the scanner.
-		 * 			 If so, add that cell to an array.
+		 * @brief 
 		 * 
-		 * @param particle The particle around which feature points will be checked for.
-		 * 
-		 * @return ** Scan - Returns a vector of all the feature points picked up within range of the give particle
+		 * @param p1 
+		 * @param p2 
+		 * @return float 
 		 */
-		vector<Scan> GetFeaturePoints(Particle particle);
+		float Get_Range(VectorXf p1, VectorXf p2);
+
+
+		/**
+		 * @brief 
+		 * 
+		 * @param p1 
+		 * @param p2 
+		 * @return * float 
+		 */
+		float Get_Bearing(VectorXf p1, VectorXf p2);
 
 
 		/**
@@ -70,16 +75,47 @@ class ParticleFilter {
 		 */
 		float ProbabilityDensityFunction(float robot_data, float particle_data, float std_dev);
 
+
+		/**
+		 * @brief Look through each occupied cell in the map and determine if it falls within the range & bounds of the scanner.
+		 * 			 If so, add that cell to an array.
+		 * 
+		 * @param particle The particle around which feature points will be checked for.
+		 * 
+		 * @return ** Scan - Returns a vector of all the feature points picked up within range of the give particle
+		 */
+		PointCloud Get_FeaturePoints(Particle particle);
+
+
+		/**
+		 * @brief 
+		 * 
+		 * @param particle_idx 
+		 * @param odom 
+		 * @return Particle 
+		 */
+		Particle Move_Particle(int particle_idx, ControlCommand odom);
+
+
+		/**
+		 * @brief Generates a weight value for a single particle by comparing the similarity between the point cloud from 
+		 * 		the scanner and the estimated point cloud for the particle at 'particle_idx' 
+		 * 
+		 * @param current_pointcloud The point cloud obtained from the scanner.
+		 * @param particle The particle to be weighted. 
+		 */
+		void Generate_Weight(PointCloud current_pointcloud, Particle &particle);
+
 		
 		/**
          * @brief Runs the particle generation and importance weighting.
 		 *
 		 * @param scan Robot Scan
-		 * @param odom The Odometry command (v, w)
+		 * @param odom The Odometry output (v, w)
          * 
          * @return ** void
          */
-        void RunParticleFilter(vector<Scan> scan, OdometryReadng odom);
+        void RunParticleFilter(PointCloud scan, ControlCommand odom);
 
 
         /**
@@ -92,6 +128,12 @@ class ParticleFilter {
 
 
     public:
+
+		/**
+		 * @brief Default Constructor
+		 * 
+		 */
+		ParticleFilter();
 
         /**
          * @brief Initializes the particle filter and creates a uniform distribution of particles.
@@ -111,7 +153,7 @@ class ParticleFilter {
 		 * @param max_beam_dist The distance from the particle to search for map features
 		 * @param angular_beam_width The Width of the range around the particle to search for map features
 		 */
-		void AddMap(float ** map, float max_beam_dist, float angular_beam_width);
+		void AddMap(Eigen::Tensor<float, 2> map, float max_beam_dist, float angular_beam_width);
 
 
 		/**
@@ -120,7 +162,7 @@ class ParticleFilter {
 		 * @param scan 
 		 * @param odom 
 		 */
-		void RunMonteCarlo(vector<Scan> scan, OdometryReadng odom);
+		void Run(PointCloud scan, ControlCommand odom);
 };
 
 
