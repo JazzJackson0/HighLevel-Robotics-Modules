@@ -4,7 +4,8 @@ project(FeatureExtractor)
 
 # Set Variables
 set(TARGET_A featureExtractionTest)
-set(SOURCES_A ../UnitTests/FeatureExtractionTest.cpp FeatureExtraction.cpp utils.cpp)
+set(SOURCES_A ../UnitTests/not_using/FeatureExtractionTest.cpp FeatureExtraction.cpp utils.cpp)
+# set(CMAKE_BUILD_TYPE Debug)
 
 #Set-up Google Test
 set(CMAKE_CXX_STANDARD 14)
@@ -19,6 +20,7 @@ FetchContent_MakeAvailable(googletest)
 # Create Executables & Link Dependencies
 add_executable(${TARGET_A} ${SOURCES_A})
 target_link_libraries(${TARGET_A} PUBLIC gmock_main) # Link Libraries to Executable
+target_link_libraries (${TARGET_A} ${Eigen_LIBRARIES})
 #target_link_libraries(${TARGET_A} PUBLIC gtest_main) # Use if not using gmock
 
 # gmock_main ^ provides a main() function. Debuggers will access the program through this main().

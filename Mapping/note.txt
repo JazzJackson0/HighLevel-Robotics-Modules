@@ -1,0 +1,10 @@
+
+
+Fixed issue with using Eigen Tensors in MapBuilder
+/usr/include/eigen3/unsupported/Eigen/CXX11/Tensor:28:10: fatal error: Eigen/src/Core/util/DisableStupidWarnings.h: No such file or directory
+/usr/include/eigen3/unsupported/Eigen/CXX11/Tensor:152:10: fatal error: Eigen/src/Core/util/ReenableStupidWarnings.h: No such file or directory
+
+Solution--------------------
+1. Added write permissions for 'group' and 'other' to usr/include/eigen3/unsupported/Eigen/CXX11/Tensor
+2. Changed #include <Eigen/src/Core/util/DisableStupidWarnings.h> to #include "../../../Eigen/src/Core/util/DisableStupidWarnings.h"
+2. Changed #include <Eigen/src/Core/util/ReenableStupidWarnings.h> to #include "../../../Eigen/src/Core/util/ReenableStupidWarnings.h"

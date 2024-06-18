@@ -4,7 +4,8 @@ project(Localization)
 
 # Set Variables
 set(TARGET_A particleFilterTest)
-set(SOURCES_A ../UnitTests/ParticleFilterTest.cpp ParticleFilter.cpp)
+set(SOURCES_A ../UnitTests/not_using/ParticleFilterTest.cpp ParticleFilter.cpp)
+# set(CMAKE_BUILD_TYPE Debug)
 
 #Set-up Google Test
 set(CMAKE_CXX_STANDARD 14)
@@ -19,6 +20,7 @@ FetchContent_MakeAvailable(googletest)
 # Create Executables & Link Dependencies
 add_executable(${TARGET_A} ${SOURCES_A})
 target_link_libraries(${TARGET_A} PUBLIC gtest_main) # Link Libraries to Executable
+target_link_libraries (${TARGET_A} ${Eigen_LIBRARIES})
 
 # Tell CMake the Target is a Unit Test
 add_test(NAME ${TARGET_A} COMMAND ${TARGET_A})

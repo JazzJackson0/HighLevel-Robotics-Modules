@@ -25,66 +25,13 @@ class ICP {
 	private:
 
 		int PoseDimension;
+		int ErrorDimension;
 		int ErrorParameterNum = 3;
 		std::vector<AD<float>> X; // X = (t_x, t_y, angle)
 		std::vector<AD<float>> Y;
 		ADFun<float> ErrorFunction;
 		float min_convergence_thresh;	
 		KDTree kd_tree;
-
-		/**
-		 * @brief Updates a given Point Cloud with the incremental result from the solution
-		 * 			to a Linear System.
-		 * 
-		 * @param PointCloud The Point Cloud to update
-		 * @param x_increment The increment to add to the Point Cloud.
-		 * @return ** PointCloud  Updated Point Cloud
-		 */
-		PointCloud Update_PointCloud(PointCloud PointCloud, VectorXf x_increment);
-		
-		/**
-		 * @brief Calculates the correspondences between two point clouds and returns subsets
-		 * 			of each cloud that map to each other (n-to-n).
-		 *
-		 * @param RefPointCloud - Reference Point Cloud
-		 * @param NewPointCloud - New Point Cloud
-		 *
-		 * @return ** pair<PointCloud, PointCloud> - (Reference Point Set, New Point Set)
-		 */
-		pair<PointCloud, PointCloud>  Calculate_Correspondences(PointCloud RefPointCloud, 
-			PointCloud NewPointCloud);
-
-		/**
-		 * @brief Get the Error between the new and reference point
-		 * 
-		 * @param x Transformation parameters (x, y, theta) applied to 'reference point set' before its comparison to 'new point set'
-		 * @param ReferencePoint Point n from Reference Point Set
-		 * @param NewPoint Point n from New Point Set
-		 * @return ** VectorXf 
-		 */
-		VectorXf GetErrorVector(VectorXf x, VectorXf ReferencePoint, VectorXf NewPoint);
-
-		/**
-		 * @brief Builds the error function for the Non-Linear Least Squares ICP method.
-		 *
-		 * @param ReferencePoint Point n from Reference Point Set
-		 * @param NewPoint Point n from New Point Set
-		 *
-		 * @return ** void
-		 */
-		void BuildErrorFunction(VectorXf ReferencePoint, VectorXf NewPoint); 
-		 
-
-
-		/**
-         * @brief Creates and solves the Jacobian for a given function.
-		 *
-		 * @param ReferencePoint Point n from Reference Point Set
-		 * @param NewPoint Point n from New Point Set
-		 * 
-         * @return ** MatrixXf - Jacobian 
-         */
-		MatrixXf CalculateJacobian(VectorXf ReferencePoint, VectorXf NewPoint); 
 
 		/**
 		 * @brief Calculate the root mean squared error between point sets.
@@ -114,6 +61,61 @@ class ICP {
 		VectorXf Get_CenterOfMass(PointCloud p_cloud);
 
 
+		/**
+		 * @brief Updates a given Point Cloud with the incremental result from the solution
+		 * 			to a Linear System.
+		 * 
+		 * @param PointCloud The Point Cloud to update
+		 * @param x_increment The increment to add to the Point Cloud.
+		 * @return ** PointCloud  Updated Point Cloud
+		 */
+		PointCloud Update_PointCloud(PointCloud PointCloud, VectorXf x_increment);
+		
+		/**
+		 * @brief Calculates the correspondences between two point clouds and returns subsets
+		 * 			of each cloud that map to each other (n-to-n).
+		 *
+		 * @param RefPointCloud - Reference Point Cloud
+		 * @param NewPointCloud - New Point Cloud
+		 *
+		 * @return ** pair<PointCloud, PointCloud> - (Reference Point Set, New Point Set)
+		 */
+		pair<PointCloud, PointCloud>  Calculate_Correspondences(PointCloud RefPointCloud, 
+			PointCloud NewPointCloud);
+
+		/**
+		 * @brief Get the Error between the new and reference point
+		 * 
+		 * @param x_param Transformation parameters (x, y, theta) applied to 'reference point set' before its comparison to 'new point set'
+		 * @param ReferencePoint Point n from Reference Point Set
+		 * @param NewPoint Point n from New Point Set
+		 * @return ** VectorXf 
+		 */
+		VectorXf GetErrorVector(VectorXf x_param, VectorXf ReferencePoint, VectorXf NewPoint);
+
+		/**
+		 * @brief Builds the error function for the Non-Linear Least Squares ICP method.
+		 *
+		 * @param ReferencePoint Point n from Reference Point Set
+		 * @param NewPoint Point n from New Point Set
+		 *
+		 * @return ** void
+		 */
+		void BuildErrorFunction(VectorXf ReferencePoint, VectorXf NewPoint); 
+		 
+
+		/**
+         * @brief Creates and solves the Jacobian for a given function.
+		 *
+		 * @param ReferencePoint Point n from Reference Point Set
+		 * @param NewPoint Point n from New Point Set
+		 * @param x_update
+		 * 
+         * @return ** MatrixXf - Jacobian 
+         */
+		MatrixXf CalculateJacobian(VectorXf ReferencePoint, VectorXf NewPoint, VectorXf x_update); 
+
+
 	public:
 
 		/**
@@ -125,8 +127,9 @@ class ICP {
 		 * @brief Initialize an Iterative Closest Point Algorithm Object.
 		 *
 		 * @param pose_dim Pose Dimension
+		 * @param error_dim Error Vector Dimension
 		 * **/	
-		ICP(int pose_dim);
+		ICP(int pose_dim, int error_dim);
 
 
 

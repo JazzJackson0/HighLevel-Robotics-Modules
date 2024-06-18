@@ -425,9 +425,9 @@ void EKFSlam::SetInitialState(Eigen::VectorXf initial_position, float _process_u
 	Build_Covariance();
 	Build_NoiseCovariances();
 
-	std::cout << "CURRENT MAP AFTER BUILD:" << std::endl;
-	std::cout << StateVector.transpose() << std::endl;
-	std::cout << "\n\n";
+	// std::cout << "CURRENT MAP AFTER BUILD:" << std::endl;
+	// std::cout << StateVector.transpose() << std::endl;
+	// std::cout << "\n\n";
 }
 
 
@@ -453,7 +453,7 @@ void EKFSlam::SetKnownLandmarks(std::vector<VectorXf> landmarks) {
 }
 
 
-Eigen::Tensor<float, 2> CreateMap() {
+Eigen::Tensor<float, 2> EKFSlam::CreateMap() {
 
 	//Eigen::Tensor<float, 2> map_structure();
 	// Finish
@@ -464,7 +464,7 @@ Eigen::Tensor<float, 2> CreateMap() {
  * 			TO-DO
  * 			-----
  *
- *  - Test Code
+ *  - 
  *  
  *  - 
  *  */

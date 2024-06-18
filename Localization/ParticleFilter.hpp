@@ -20,6 +20,11 @@ struct Particle {
 	float weight;
 };
 
+struct Distribution {
+	float mean;
+	float std_dev;
+	Distribution(float _mean, float _std_dev) : mean(_mean), std_dev(_std_dev ) {}
+};
 
 class ParticleFilter {
 
@@ -30,11 +35,12 @@ class ParticleFilter {
 		int MaxParticles;
 		int PoseDimensions;
 		float TimeInterval;
-		float pose_sigma = 1.0; // Pose Standard Deviation
+		float pose_sigma; // Pose Standard Deviation
+		float range_sigma; // Standard Deviation for the Range
+		float bearing_sigma; // Standard Deviation for the Bearing
 		float range_coef; // How much range weight impacts total particle weight
-		float range_sigma = 1.0; // Standard Deviation for the Range
 		float bearing_coef; // How much bearing weight impacts total particle weight
-		float bearing_sigma = 0.5; // Standard Deviation for the Bearing
+		
 		
 		// Map
 		Eigen::Tensor<float, 2> Map;
@@ -63,17 +69,26 @@ class ParticleFilter {
 
 
 		/**
+		 * @brief 
+		 * 
+		 * @param lowVal 
+		 * @param highVal 
+		 * @return float 
+		 */
+		float Get_RandomBetween(float lowVal, float highVal);
+
+
+		/**
 		 * @brief Returns the probability of the mean (created with range_scan & particle_scan) 
 		 * 			occurring. A higher value (used as a weight) indicates a higher similarity 
 		 * 			between robot & particle data. A lower value indicates a low similarity.
 		 *
-		 * @param robot_data Range Scan 
-		 * @param particle_data Particle Data
-		 * @param std_dev Standard Deviation
+		 * @param x 
+		 * @param distribution Particle Data
 		 *
 		 * @return ** float - Probability
 		 */
-		float ProbabilityDensityFunction(float robot_data, float particle_data, float std_dev);
+		float ProbabilityDensityFunction(float x, Distribution distribution);
 
 
 		/**
@@ -101,10 +116,10 @@ class ParticleFilter {
 		 * @brief Generates a weight value for a single particle by comparing the similarity between the point cloud from 
 		 * 		the scanner and the estimated point cloud for the particle at 'particle_idx' 
 		 * 
-		 * @param current_pointcloud The point cloud obtained from the scanner.
+		 * @param robot_pointcloud The point cloud obtained from the scanner.
 		 * @param particle The particle to be weighted. 
 		 */
-		void Generate_Weight(PointCloud current_pointcloud, Particle &particle);
+		void Generate_Weight(PointCloud robot_pointcloud, Particle &particle);
 
 		
 		/**

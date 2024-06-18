@@ -6,9 +6,10 @@ project(PathPlanning)
 set(TARGET_A aStarTest)
 set(SOURCES_A ../UnitTests/AStarTest.cpp AStar.cpp)
 set(TARGET_B bugTest)
-set(SOURCES_B ../UnitTests/BUGTest.cpp BUG.cpp)
+set(SOURCES_B ../UnitTests/not_using/BUGTest.cpp BUG.cpp)
 set(TARGET_C rrtTest)
 set(SOURCES_C ../UnitTests/RRTTest.cpp RRT.cpp)
+set(CMAKE_BUILD_TYPE Debug)
 
 #Set-up Google Test
 set(CMAKE_CXX_STANDARD 14)
@@ -25,12 +26,14 @@ include_directories(${CMAKE_SOURCE_DIR}/../DataStructures/)
 # Create Executables & Link Dependencies
 add_executable(${TARGET_A} ${SOURCES_A})
 target_link_libraries(${TARGET_A} PUBLIC gtest_main) # Link GoogleTest's main() to Executable
+target_link_libraries (${TARGET_A} ${Eigen_LIBRARIES})
 
 add_executable(${TARGET_B} ${SOURCES_B})
 target_link_libraries(${TARGET_B} PUBLIC gtest_main) # Link GoogleTest's main() to Executable
 
 add_executable(${TARGET_C} ${SOURCES_C})
 target_link_libraries(${TARGET_C} PUBLIC gtest_main) # Link GoogleTest's main() to Executable
+target_link_libraries (${TARGET_C} ${Eigen_LIBRARIES})
 
 
 # Tell CMake the Target is a Unit Test

@@ -481,7 +481,7 @@ void PoseGraphOptSLAM::Run(PointCloud current_landmarks, VectorXf &currentPose) 
 }
 
 
-Eigen::Tensor<float, 2> CreateMap() {
+Eigen::Tensor<float, 2> PoseGraphOptSLAM::CreateMap() {
 
 	//Eigen::Tensor<float, 2> map_structure();
 	// Finish
@@ -491,7 +491,7 @@ Eigen::Tensor<float, 2> CreateMap() {
 /*
  * 			TO-DO
  * 			-----
- *  - Test Code
+ *  - 
  *   
  *  - 
  * 

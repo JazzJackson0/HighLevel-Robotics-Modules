@@ -1,11 +1,60 @@
-#include "../include/ICP.hpp"
+#include "ICP.hpp"
+
+float ICP::Get_RootMeanSquaredError(PointCloud RefPointSet, PointCloud NewPointSet) {
+
+	float rms_error = 0.f;
+	int n = RefPointSet.points.size();
+
+	for (int i = 0; i < n; i++) {
+
+		rms_error += Get_EuclideanDistance(RefPointSet.points[i], NewPointSet.points[i]);
+	}
+
+	return sqrt(rms_error / n);
+	// TODO: Squaring the data once here and once in 'Get_EuclideanDistance' might be a problem, look into it.
+}
+
+float ICP::Get_EuclideanDistance(VectorXf p, VectorXf q) {
+
+	float dist = 0.f;
+	for (int i = 0; i < p.rows(); i++) {
+
+		dist += pow(p[i] - q[i], 2);
+	}
+
+	return sqrt(dist);
+}
+
+VectorXf ICP::Get_CenterOfMass(PointCloud p_cloud) {
+
+	float total_weight = 0.0;
+	VectorXf center_mass(PoseDimension);
+	center_mass = VectorXf::Zero(PoseDimension);
+
+	for (int i = 0; i < p_cloud.weights.size(); i++) {
+
+		total_weight += p_cloud.weights[i];
+	}
+
+	for (int i = 0; i < p_cloud.points.size(); i++) {
+
+		center_mass += (p_cloud.points[i] * p_cloud.weights[i]) / total_weight;
+	}
+
+	return center_mass;
+}
 
 PointCloud ICP::Update_PointCloud(PointCloud pointCloud, VectorXf x_increment) {
 
+	// Create Rotation Matrix from angle increment.
+	MatrixXf rotation(2, 2);
+	rotation << std::cos(x_increment[2]), -1 * std::sin(x_increment[2]), 
+		std::sin(x_increment[2]), std::cos(x_increment[2]);
+
 	for (int i = 0; i < pointCloud.points.size(); i++) {
-		pointCloud.points[i][0] = x_increment[i];
-		pointCloud.points[i][1] = x_increment[i + 1];
-		pointCloud.points[i][2] = x_increment[i + 2];
+		VectorXf translated_point(PoseDimension);
+		translated_point << (pointCloud.points[i][0] + x_increment[0]), (pointCloud.points[i][1] + x_increment[1]);
+		pointCloud.points[i] = rotation * translated_point;
 	}
 
 	return pointCloud;
@@ -54,11 +103,11 @@ pair<PointCloud, PointCloud>  ICP::Calculate_Correspondences(PointCloud RefPoint
 	return std::make_pair(RefPointCloud, PointSet_New);
 }
 
-VectorXf ICP::GetErrorVector(VectorXf x, VectorXf ReferencePoint, VectorXf NewPoint) {
+VectorXf ICP::GetErrorVector(VectorXf x_param, VectorXf ReferencePoint, VectorXf NewPoint) {
 
 	VectorXf error_vector(2);
-	error_vector[0] = cos(x[2]) * NewPoint[0] - sin(x[2]) * NewPoint[1] + x[0] - ReferencePoint[0];
-	error_vector[1] = sin(x[2]) * NewPoint[0] + cos(x[2]) * NewPoint[1] + x[0] - ReferencePoint[1];
+	error_vector[0] = (cos(x_param[2]) * NewPoint[0]) - (sin(x_param[2]) * NewPoint[1]) + x_param[0] - ReferencePoint[0];
+	error_vector[1] = (sin(x_param[2]) * NewPoint[0]) + (cos(x_param[2]) * NewPoint[1]) + x_param[1] - ReferencePoint[1];
 
 	return error_vector;
 }
@@ -68,7 +117,7 @@ VectorXf ICP::GetErrorVector(VectorXf x, VectorXf ReferencePoint, VectorXf NewPo
 void ICP::BuildErrorFunction(VectorXf ReferencePoint, VectorXf NewPoint) {
 	
 	// Initialize each element in X as an Auto-Diff Object (Equivalent to a variable x)
-	for (size_t i = 0; i < ErrorParameterNum; i++) {
+	for (size_t i = 0; i < ErrorDimension; i++) {
 		
 		X[i] = AD<float>(0);
 	}
@@ -80,8 +129,8 @@ void ICP::BuildErrorFunction(VectorXf ReferencePoint, VectorXf NewPoint) {
 
 	// Set up your functions that will be Auto-Differentiated
 		// X = (t_x, t_y, angle) 
-	Y[0] = CppAD::cos(X[2]) * NewPoint[0] - CppAD::sin(X[2]) * NewPoint[1] + X[0] - ReferencePoint[0];
-	Y[1] = CppAD::sin(X[2]) * NewPoint[0] + CppAD::cos(X[2]) * NewPoint[1] + X[0] - ReferencePoint[1];
+	Y[0] = (CppAD::cos(X[2]) * NewPoint[0]) - (CppAD::sin(X[2]) * NewPoint[1]) + X[0] - ReferencePoint[0];
+	Y[1] = (CppAD::sin(X[2]) * NewPoint[0]) + (CppAD::cos(X[2]) * NewPoint[1]) + X[1] - ReferencePoint[1];
 
 	// Creates f: x -> y and stops tape recording
 		// Performs the derivative calculations on the empty x variables.
@@ -90,85 +139,43 @@ void ICP::BuildErrorFunction(VectorXf ReferencePoint, VectorXf NewPoint) {
 
 	
 
-MatrixXf ICP::CalculateJacobian(VectorXf ReferencePoint, VectorXf NewPoint) {
+MatrixXf ICP::CalculateJacobian(VectorXf ReferencePoint, VectorXf NewPoint, VectorXf x_update) {
 	
 	// STEP 1: Set Up Update Function----------------------------------------------	
 	BuildErrorFunction(NewPoint, ReferencePoint);	
 	
 	// STEP 2: Compute the Jacobian of the Update Function ------------------------
-	int rows = PoseDimension;
-	int cols = 2;
-	int nonZeroElements = 2 * PoseDimension;
+	int rows = ErrorDimension;
+	int cols = PoseDimension;
 	
 	// Create vector of variables Jacobian will be calculated with respect to ( J(x) ).
 	// Holds the value of the corresponding Independent Variable's index.
 	// (e.g., 0 = X[0], 1 = X[1], etc.)
-	std::vector<float> WithRespectTo(PoseDimension);
-	for (size_t i = 0; i < PoseDimension; i++) {
-		WithRespectTo[i] = (float) i;
+	std::vector<float> WithRespectTo(ErrorDimension);
+	for (size_t i = 0; i < ErrorDimension; i++) {
+		WithRespectTo[i] = x_update[i];
 	}
 		
 	// Compute the Jacobian***********
-	std::vector<float> jac(2 * PoseDimension);
+	std::vector<float> jac(PoseDimension * ErrorDimension);
 	MatrixXf Jac;
 
 	jac = ErrorFunction.Jacobian(WithRespectTo);
 
-	Jac = MatrixXf::Zero(2, PoseDimension);
-	for (int i = 0; i < jac.size(); i++) {
+	Jac = MatrixXf::Zero(PoseDimension, ErrorDimension);
+	int k = 0;
+	for (int i = 0; i < Jac.rows(); i++) {
 
-		Jac << jac[i];
+		for (int j = 0; j < Jac.cols(); j++) {
+
+			Jac(i, j) = jac[j + k];
+		}
+
+		k += Jac.cols();	
 	}
 
 	// Return a Matrix
 	return Jac;
-}
-
-float ICP::Get_RootMeanSquaredError(PointCloud RefPointSet, PointCloud NewPointSet) {
-
-	float rms_error = 0.f;
-	int n = RefPointSet.points.size();
-
-	for (int i = 0; i < n; i++) {
-
-		rms_error += Get_EuclideanDistance(RefPointSet.points[i], NewPointSet.points[i]);
-	}
-
-	return sqrt(rms_error / n);
-	// TODO: Squaring the data once here and once in 'Get_EuclideanDistance' might be a problem, look into it.
-}
-
-float ICP::Get_EuclideanDistance(VectorXf p, VectorXf q) {
-
-	float dist = 0.f;
-	for (int i = 0; i < p.rows(); i++) {
-
-		dist += pow(p[i] - q[i], 2);
-	}
-
-	return sqrt(dist);
-}
-
-
-
-
-VectorXf ICP::Get_CenterOfMass(PointCloud p_cloud) {
-
-	float total_weight = 0.0;
-	VectorXf center_mass(PoseDimension);
-	center_mass = VectorXf::Zero(PoseDimension);
-
-	for (int i = 0; i < p_cloud.weights.size(); i++) {
-
-		total_weight += p_cloud.weights[i];
-	}
-
-	for (int i = 0; i < p_cloud.points.size(); i++) {
-
-		center_mass += (p_cloud.points[i] * p_cloud.weights[i]) / total_weight;
-	}
-
-	return center_mass;
 }
 
 
@@ -177,9 +184,9 @@ ICP::ICP() {
 }
 
 
-ICP::ICP(int pose_dim) : PoseDimension(pose_dim) {
+ICP::ICP(int pose_dim, int error_dim) : PoseDimension(pose_dim), ErrorDimension(error_dim) {
 
-	std::vector<AD<float>> xs(PoseDimension);
+	std::vector<AD<float>> xs(ErrorDimension);
 	std::vector<AD<float>> ys(PoseDimension);
 	X = xs;
 	Y = ys;
@@ -295,11 +302,10 @@ RotationTranslation ICP::RunICP_SVD(PointCloud RefPointCloud, PointCloud NewPoin
 VectorXf ICP::RunICP_LeastSquares(PointCloud RefPointCloud, PointCloud NewPointCloud) {
 	
 	pair<PointCloud, PointCloud> point_sets = Calculate_Correspondences(RefPointCloud, NewPointCloud);
-	MatrixXf H_sum;
-	VectorXf b_sum;
-	VectorXf x_update = VectorXf::Zero(3);
-	int i = 0;
-	int iterations;
+	MatrixXf H_sum = MatrixXf::Zero(ErrorDimension, ErrorDimension);
+	VectorXf b_sum = VectorXf::Zero(ErrorDimension);
+	VectorXf x_update = VectorXf::Zero(ErrorDimension);
+	int iterations = 0;
 
 	// While Not Converged
 	while (Get_RootMeanSquaredError(point_sets.first, point_sets.second) < min_convergence_thresh || iterations < 30) { 
@@ -307,7 +313,7 @@ VectorXf ICP::RunICP_LeastSquares(PointCloud RefPointCloud, PointCloud NewPointC
 		// Compute sum of H and b over all N points.
 		for (int n = 0; n < point_sets.first.points.size() ; n++) {
 			
-			MatrixXf Jac = CalculateJacobian(point_sets.first.points[n], point_sets.second.points[n]);
+			MatrixXf Jac = CalculateJacobian(point_sets.first.points[n], point_sets.second.points[n], x_update);
 			MatrixXf H = Jac.transpose() * Jac;
 			VectorXf b = Jac.transpose() * GetErrorVector(x_update, point_sets.first.points[n], point_sets.second.points[n]);
 
@@ -331,11 +337,11 @@ VectorXf ICP::RunICP_LeastSquares(PointCloud RefPointCloud, PointCloud NewPointC
 /*
  * 			TO-DO
  * 			-----
- *  - Test Code
- * 
- *  - Do INVERSE multiplicatoin between transformation matrices to get edges!
- *  
  *  - Need a function to set the weight values for each point in a PointCloud
+ * 
+ *  - 
+ *  
+ *  - 
  *
  *  */
 

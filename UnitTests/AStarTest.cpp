@@ -1,6 +1,10 @@
 #include <iostream>
+#include <vector>
 #include <gtest/gtest.h>
-#include "AStar.hpp"
+#include </usr/include/eigen3/Eigen/Dense>
+#include "/usr/include/eigen3/unsupported/Eigen/CXX11/Tensor"
+#include "../PathPlanning/AStar.hpp"
+
 
 
 class AStarTest : public ::testing::Test {
@@ -9,25 +13,37 @@ class AStarTest : public ::testing::Test {
 
 		AStarTest() {
 
-			int grid_width = 10;
-			int grid_height = 8;
-			int pre_grid[grid_height][grid_width] = {{1, 1, 1, 0, 1, 1, 0, 0, 1, 1},
-													{0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
-													{0, 0, 0, 0, 0, 0, 0, 1, 0, 0},
-													{0, 0, 1, 0, 0, 0, 0, 0, 0, 1},
-													{0, 0, 0, 0, 1, 1, 1, 0, 0, 1},
-													{0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
-													{0, 0, 0, 0, 0, 0, 1, 0, 0, 0},
-													{0, 0, 0, 0, 0, 1, 1, 1, 0, 0}};
-			int* grid_rows[grid_height] = {pre_grid[0], pre_grid[1], pre_grid[2], pre_grid[3], pre_grid[4], pre_grid[5], pre_grid[6], pre_grid[7]};
-			int** grid = grid_rows;
-			
-			astar = new A_Star(grid, grid_width, grid_height);
+			float grid_storage[] = {1.f, 1.f, 1.f, 0.f, 1.f, 1.f, 0.f, 0.f, 1.f, 1.f,
+								 	0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f,
+								 	0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
+								 	0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f,
+								 	0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f, 1.f,
+								 	0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f,
+								 	0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f,
+								 	0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f};
+
+			Tensor<float, 2> grid(8, 10);
+			auto &d = grid.dimensions();
+			int rows = d[0];
+			int cols = d[1];
+			int k = 0;
+			for (int i = 0; i < rows; i++) {
+
+				for (int j = 0; j < cols; j++) {
+
+					grid(i, j) = grid_storage[j + k];
+				}
+
+				k += cols;	
+			}
+
+			astar = new A_Star(grid);
 		}
 			
 		//~AStarTest() {}
 
 		A_Star *astar;
+		A_Star *astar2;
 };
 
 
@@ -35,9 +51,96 @@ class AStarTest : public ::testing::Test {
  *	@brief 
  *
  * **/
-TEST_F(AStarTest, Search1) {
+TEST_F(AStarTest, Path) {
 	
-	CellCoordinate start = std::make_pair(0, 5);
-	CellCoordinate goal = std::make_pair(9, 9);
-	EXPECT_TRUE(astar->Search(start, goal));
+	VectorXi start(2);
+	VectorXi goal(2);
+	start << 0, 1;
+	goal << 9, 7;
+	std::vector<VectorXi> path = astar->Path(start, goal);
+
+	EXPECT_EQ(path[0][0], 0);
+	EXPECT_EQ(path[0][1], 1);
+
+	EXPECT_EQ(path[1][0], 1);
+	EXPECT_EQ(path[1][1], 2);
+
+	EXPECT_EQ(path[2][0], 2);
+	EXPECT_EQ(path[2][1], 2);
+
+	EXPECT_EQ(path[3][0], 3);
+	EXPECT_EQ(path[3][1], 3);
+
+	EXPECT_EQ(path[4][0], 4);
+	EXPECT_EQ(path[4][1], 3);
+
+	EXPECT_EQ(path[5][0], 5);
+	EXPECT_EQ(path[5][1], 3);
+
+	EXPECT_EQ(path[6][0], 6);
+	EXPECT_EQ(path[6][1], 3);
+
+	EXPECT_EQ(path[7][0], 7);
+	EXPECT_EQ(path[7][1], 4);
+
+	EXPECT_EQ(path[8][0], 8);
+	EXPECT_EQ(path[8][1], 5);
+
+	EXPECT_EQ(path[9][0], 9);
+	EXPECT_EQ(path[9][1], 6);
+
+	EXPECT_EQ(path[10][0], 9);
+	EXPECT_EQ(path[10][1], 7);
+}
+
+
+/**
+ *	@brief 
+ *
+ * **/
+TEST_F(AStarTest, Path2) {
+	
+	float grid_storage2[] = {1.f, 1.f, 1.f, 0.f, 1.f, 1.f, 0.f, 0.f, 1.f, 1.f, 1.f, 1.f, 1.f, 0.f, 1.f, 1.f, 0.f, 0.f, 1.f, 1.f,
+							 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
+							 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f,
+							 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f, 1.f,
+							 0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f,
+							 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f,
+							 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
+							 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f, 1.f,
+							 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 1.f, 1.f, 0.f, 0.f, 1.f, 1.f,
+							 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
+							 1.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
+							 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
+							 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f, 1.f,
+							 1.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 1.f, 0.f, 0.f, 0.f, 1.f};
+	
+	Tensor<float, 2> grid2(14, 20);
+	auto &d2 = grid2.dimensions();
+	int rows = d2[0];
+	int cols = d2[1];
+	int k = 0;
+	for (int i = 0; i < rows; i++) {
+
+		for (int j = 0; j < cols; j++) {
+
+			grid2(i, j) = grid_storage2[j + k];
+		}
+
+		k += cols;	
+	}
+	
+	VectorXi start(2);
+	VectorXi goal(2);
+	start << 19, 1;
+	goal << 0, 12;
+	astar->Load_MAP(grid2);
+	std::vector<VectorXi> path = astar->Path(start, goal);
+
+
+	EXPECT_EQ(path[0][0], 19);
+	EXPECT_EQ(path[0][1], 1);
+
+	EXPECT_EQ(path[19][0], 0);
+	EXPECT_EQ(path[19][1], 12);
 }

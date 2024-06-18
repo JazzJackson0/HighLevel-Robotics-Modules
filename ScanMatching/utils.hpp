@@ -8,8 +8,8 @@ using Eigen::MatrixXf;
 using namespace::Eigen;
 
 struct PointCloud {
-	std::vector<VectorXf> Points;
-	std::vector<float> Weights;
+	std::vector<VectorXf> points;
+	std::vector<float> weights;
 };
 
 struct RotationTranslation {

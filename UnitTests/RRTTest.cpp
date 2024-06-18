@@ -1,6 +1,8 @@
 #include <iostream>
 #include <gtest/gtest.h>
-#include "RRT.hpp"
+#include </usr/include/eigen3/Eigen/Dense>
+#include "/usr/include/eigen3/unsupported/Eigen/CXX11/Tensor"
+#include "../PathPlanning/RRT.hpp"
 
 
 class RRTTest : public ::testing::Test {
@@ -9,20 +11,30 @@ class RRTTest : public ::testing::Test {
 
 		RRTTest() {
 
-			int grid_width = 10;
-			int grid_height = 8;
-			int pre_grid[grid_height][grid_width] = {{1, 1, 1, 0, 1, 1, 0, 0, 1, 1},
-													{0, 0, 0, 0, 0, 0, 0, 1, 0, 0},
-													{0, 0, 1, 0, 0, 0, 0, 1, 0, 0},
-													{0, 0, 0, 1, 0, 0, 0, 1, 0, 0},
-													{0, 0, 0, 0, 1, 0, 0, 1, 0, 0},
-													{0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-													{0, 1, 0, 0, 0, 0, 0, 1, 1, 0},
-													{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
-			int* grid_rows[grid_height] = {pre_grid[0], pre_grid[1], pre_grid[2], pre_grid[3], pre_grid[4], pre_grid[5], pre_grid[6], pre_grid[7]};
-			int** grid = grid_rows;
+			float grid_storage[] = {1.f, 1.f, 1.f, 0.f, 1.f, 1.f, 0.f, 0.f, 1.f, 1.f,
+								 	0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f,
+								 	0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
+								 	0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f,
+								 	0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f, 1.f,
+								 	0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f,
+								 	0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f,
+								 	0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f};
 
-			rrt = new RRT(grid, grid_width, grid_height);
+			Tensor<float, 2> grid(8, 10);
+			auto &d = grid.dimensions();
+			int rows = d[0];
+			int cols = d[1];
+			int k = 0;
+			for (int i = 0; i < rows; i++) {
+
+				for (int j = 0; j < cols; j++) {
+
+					grid(i, j) = grid_storage[j + k];
+				}
+
+				k += cols;	
+			}
+			rrt = new RRT(grid);
 		}
 			
 		~RRTTest() {
@@ -38,38 +50,191 @@ class RRTTest : public ::testing::Test {
  *
  *
  * **/
-TEST_F(RRTTest, Run_RRT) {
+TEST_F(RRTTest, RRT_Path1) {
 
-	Node start_node;
-	Node goal_node;
-	start_node.x = 0;
-	start_node.y = 0;
-	start_node.DistanceFromStart = 0;
-	goal_node.x = 8;
-	goal_node.y = 9;
+	VectorXi start(2);
+	VectorXi goal(2);
+	start << 0, 0;
+	goal << 9, 7;
 	int max_connect_distance = 3;
 
-	rrt->Run_RRT(start_node, goal_node, max_connect_distance);
+	std::vector<VectorXi> path = rrt->RRT_Path(start, goal, max_connect_distance);
 
+	for (int i = 0; i < path.size(); i++) {
+		std::cout << path[i].transpose() << std::endl;
+	}
+
+	EXPECT_EQ(path[0][0], 0);
+	EXPECT_EQ(path[0][1], 0);
 }
+
 
 /**
  * @brief
  *
  *
  * **/
-TEST_F(RRTTest, Run_RRTStar) {
+TEST_F(RRTTest, RRT_Path2) {
+
+	VectorXi start(2);
+	VectorXi goal(2);
+	start << 0, 1;
+	goal << 9, 7;
+	int max_connect_distance = 3;
+
+	std::vector<VectorXi> path = rrt->RRT_Path(start, goal, max_connect_distance);
+
+	for (int i = 0; i < path.size(); i++) {
+		std::cout << path[i].transpose() << std::endl;
+	}
+
+	EXPECT_EQ(path[0][0], 0);
+	EXPECT_EQ(path[0][1], 1);
+	EXPECT_EQ(path[path.size() - 1][0], 9);
+	EXPECT_EQ(path[path.size() - 1][1], 7);
+}
+
+
+/**
+ * @brief
+ *
+ *
+ * **/
+TEST_F(RRTTest, RRT_Path3_LoadMap) {
+
+	float grid_storage2[] = {1.f, 1.f, 1.f, 0.f, 1.f, 1.f, 0.f, 0.f, 1.f, 1.f, 1.f, 1.f, 1.f, 0.f, 1.f, 1.f, 0.f, 0.f, 1.f, 1.f,
+							 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
+							 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f,
+							 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f, 1.f,
+							 0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f,
+							 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f,
+							 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
+							 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f, 1.f,
+							 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 1.f, 1.f, 0.f, 0.f, 1.f, 1.f,
+							 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
+							 1.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
+							 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
+							 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f, 1.f,
+							 1.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 1.f, 0.f, 0.f, 0.f, 1.f};
 	
-	Node start_node;
-	Node goal_node;
-	start_node.x = 0;
-	start_node.y = 0;
-	start_node.DistanceFromStart = 0;
-	goal_node.x = 8;
-	goal_node.y = 9;
+	Tensor<float, 2> grid2(14, 20);
+	auto &d2 = grid2.dimensions();
+	int rows = d2[0];
+	int cols = d2[1];
+	int k = 0;
+	for (int i = 0; i < rows; i++) {
+
+		for (int j = 0; j < cols; j++) {
+
+			grid2(i, j) = grid_storage2[j + k];
+		}
+
+		k += cols;	
+	}
+	
+	VectorXi start(2);
+	VectorXi goal(2);
+	start << 19, 1;
+	goal << 0, 12;
+	int max_connect_distance = 3;
+	
+	rrt->Load_MAP(grid2);
+	std::vector<VectorXi> path = rrt->RRT_Path(start, goal, max_connect_distance);
+
+	for (int i = 0; i < path.size(); i++) {
+		std::cout << path[i].transpose() << std::endl;
+	}
+
+	EXPECT_EQ(path[0][0], 19);
+	EXPECT_EQ(path[0][1], 1);
+	EXPECT_EQ(path[path.size() - 1][0], 0);
+	EXPECT_EQ(path[path.size() - 1][1], 12);
+}
+
+
+/**
+ * @brief
+ *
+ *
+ * **/
+TEST_F(RRTTest, RRTStar_Path) {
+	
+	VectorXi start(2);
+	VectorXi goal(2);
+	start << 0, 1;
+	goal << 9, 7;
 	int max_connect_distance = 3;
 	int search_radius = 5;
 
-	rrt->Run_RRTStar(start_node, goal_node, max_connect_distance, search_radius);
+	std::vector<VectorXi> path = rrt->RRTStar_Path(start, goal, max_connect_distance, search_radius);
+
+	for (int i = 0; i < path.size(); i++) {
+		std::cout << path[i].transpose() << std::endl;
+	}
+
+	EXPECT_EQ(path[0][0], 0);
+	EXPECT_EQ(path[0][1], 1);
+	EXPECT_EQ(path[path.size() - 1][0], 9);
+	EXPECT_EQ(path[path.size() - 1][1], 7);
+}
+
+
+
+
+/**
+ * @brief
+ *
+ *
+ * **/
+TEST_F(RRTTest, RRTStar_Path2_LoadMap) {
+	
+	float grid_storage2[] = {1.f, 1.f, 1.f, 0.f, 1.f, 1.f, 0.f, 0.f, 1.f, 1.f, 1.f, 1.f, 1.f, 0.f, 1.f, 1.f, 0.f, 0.f, 1.f, 1.f,
+							 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
+							 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f,
+							 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f, 1.f,
+							 0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f,
+							 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f,
+							 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
+							 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f, 1.f,
+							 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 1.f, 1.f, 0.f, 0.f, 1.f, 1.f,
+							 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
+							 1.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
+							 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f,
+							 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f, 1.f,
+							 1.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f, 1.f, 0.f, 0.f, 0.f, 1.f};
+	
+	Tensor<float, 2> grid2(14, 20);
+	auto &d2 = grid2.dimensions();
+	int rows = d2[0];
+	int cols = d2[1];
+	int k = 0;
+	for (int i = 0; i < rows; i++) {
+
+		for (int j = 0; j < cols; j++) {
+
+			grid2(i, j) = grid_storage2[j + k];
+		}
+
+		k += cols;	
+	}
+	
+	VectorXi start(2);
+	VectorXi goal(2);
+	start << 19, 1;
+	goal << 0, 12;
+	int max_connect_distance = 3;
+	int search_radius = 5;
+
+	rrt->Load_MAP(grid2);
+	std::vector<VectorXi> path = rrt->RRTStar_Path(start, goal, max_connect_distance, search_radius);
+
+	for (int i = 0; i < path.size(); i++) {
+		std::cout << path[i].transpose() << std::endl;
+	}
+
+	EXPECT_EQ(path[0][0], 19);
+	EXPECT_EQ(path[0][1], 1);
+	EXPECT_EQ(path[path.size() - 1][0], 0);
+	EXPECT_EQ(path[path.size() - 1][1], 12);
 }
 

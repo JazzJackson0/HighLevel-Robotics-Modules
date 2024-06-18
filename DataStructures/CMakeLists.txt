@@ -4,7 +4,8 @@ project(DataStructures)
 
 # Set Variables
 set(TARGET_A graphTest)
-set(SOURCES_A GraphTest.cpp)
+set(SOURCES_A ../UnitTests/not_using/GraphTest.cpp)
+set(CMAKE_BUILD_TYPE Debug)
 
 #Set-up Google Test
 set(CMAKE_CXX_STANDARD 14)

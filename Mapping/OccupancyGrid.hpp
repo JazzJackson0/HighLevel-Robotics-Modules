@@ -4,37 +4,35 @@
 #include <utility>
 #include <vector>
 #include </usr/include/eigen3/Eigen/Dense>
+#include "/usr/include/eigen3/unsupported/Eigen/CXX11/Tensor"
+#include "utils.hpp"
+#include "MapBuilder.hpp"
 
 using namespace::Eigen;
 using std::vector;
 using std::pair;
 using std::make_pair;
 
+namespace ogrid{
+struct Cell {
+    int x, y;
+}; 
+};
+
+
 class OccupancyGridMap {
 
 	private:
-		MatrixXf InitialGridMap;
-		MatrixXf GridMap;
-		MatrixXf PreviousGridMap;
+		Eigen::Tensor<float, 2> InitialGridMap;
+		Eigen::Tensor<float, 2> GridMap;
+		Eigen::Tensor<float, 2>PreviousGridMap;
+		VectorXi Pose; // Current pose of the robot
 		int M;
 		int N;
-		float Alpha;
-		float Beta;
+		float Alpha; // Width of Cell
+		float Beta; // Angular width of Scanner Beam
 		float MaxRange;
-
-		/**
-		 * @brief An inverse measurement model for a range scanner. Looks through each
-		 * 			beam in a scan and uses them to determine whether a given cell is 
-		 * 			occupied or not.
-		 *
-		 * @param cell Current Cell under examination
-		 * @param pose Current pose of the robot
-		 * @param scan Range Scan
-		 *
-		 * @return float - Return probability value for given cell.
-		 */
-		float InverseSensorModel(pair<int, int> cell, VectorXf pose, vector<VectorXf> scan);
-
+		MapBuilder map_builder;
 
 
 		/**
@@ -46,21 +44,39 @@ class OccupancyGridMap {
 		 */
 		float LogOdds(float x);
 
+		
+		/**
+		 * @brief An inverse measurement model for a range scanner. Looks through each
+		 * 			beam in a scan and uses them to determine whether a given cell is 
+		 * 			occupied or not.
+		 *
+		 * @param cell Current Cell under examination
+		 * @param beams Range Scan
+		 *
+		 * @return float - Return probability value for given cell.
+		 */
+		float InverseSensorModel(ogrid::Cell cell, std::vector<VectorXf> beams);
 
 
 		/**
-		 * @brief Returns the index of the beam in a scan that is closest to a given bearing.
+		 * @brief Returns the index of the beam in a scan that is closest in heading to a given bearing.
 		 *
 		 * @param scan Range Scan
+		 * @param range The range to compare each beam to.
 		 * @param bearing The bearing to compare each beam to.
 		 *
 		 * @return int - Index of beam with a bearing most similar to the bearing parameter
 		 */
-		int Get_MinIndex(vector<VectorXf> scan, float bearing);
+		int Get_MostSimilarBeam(std::vector<VectorXf> scan, float range, float bearing);
 
 
 	public:
 
+		/**
+		 * @brief Default Constructoe
+		 * 
+		 */
+		OccupancyGridMap();		
 
 		/**
 		 * @brief Initialize an Occupancy Grid Map
@@ -81,9 +97,18 @@ class OccupancyGridMap {
 		 * @param pose Current Robot Pose
 		 * @param scan Range Scan
 		 *
-		 * @return void 
+		 * @return Eigen::Tensor<float, 2> - The updated map
 		 */
-		void UpdateGridMap(VectorXf pose, vector<VectorXf> scan);
+		Eigen::Tensor<float, 2> UpdateGridMap(VectorXf pose, std::vector<VectorXf> scan);
+
+
+		/**
+		 * @brief 
+		 * 
+		 * @param cloud 
+		 * @return Eigen::Tensor<float, 2> 
+		 */
+		Eigen::Tensor<float, 2> UpdateGridMapWithPointCloud(PointCloud cloud);
 
 };
 
