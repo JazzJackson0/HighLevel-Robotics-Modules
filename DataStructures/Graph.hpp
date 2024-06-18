@@ -1,13 +1,10 @@
 #pragma once
 #include <iostream>
-#include <list>
 #include <vector>
 #include <queue>
+#include <stack>
 
-using std::list; // Linked Lists
 using std::vector;
-
-
 
 template <typename Z> struct Edge {
     int edge_id;
@@ -16,8 +13,6 @@ template <typename Z> struct Edge {
     Z weight;
     int err;
 };
-
-
 
 
 template <typename T, typename Z> struct Vertex {
@@ -36,10 +31,42 @@ template <typename T, typename Z>
 class Graph {
 
     private:
-        bool Directed;
-        std::vector<Vertex<T, Z>> G;
+        int Directed;
+        
+        std::vector<Vertex<T, Z>> Vertices;
         std::vector<Edge<Z>> Edges;
         int RecentVertexID;   
+        typedef enum { NONE, FORWARD, BACKWARD }EdgeDirection;
+
+        /**
+         * @brief Helper for DFS_Path()
+         * 
+         * @param vertex 
+         * @param visited 
+         * @return true 
+         * @return false 
+         */
+        bool beenVisited(int vertex, std::vector<int> visited);
+
+        /**
+         * @brief 
+         * 
+         */
+        void Delete_Edge(int id);
+
+        /**
+         * @brief 
+         * 
+         */
+        void Update_EdgeIDs();
+
+        /**
+         * @brief 
+         * 
+         * @param old_edge_id 
+         * @param new_edge_id 
+         */
+        void Update_EdgeIDHelper(int old_edge_id, int vertex_id, int new_edge_id);
     
     public:
         
@@ -53,12 +80,17 @@ class Graph {
         /**
          * @brief Initialize a Graph
          * 
-         * @param adjacency_list The data structure for the Graph. An array of vertices, each storing their own
-         *          Linked List of adjacent vertices.
-         * @param state Sets Graph to be Directed (TRUE) or Undirected (FALSE) 
+         * @param state Sets Graph to be Undirected (0) or Forward Directed (1) Backward Directed (2)
          * 
          */
-        Graph(vector<Vertex<T, Z>> adjacency_list, bool state);
+        Graph(int state);
+
+        /**
+         * @brief 
+         * 
+         * @param state 
+         */
+        void SetGraphType(int state);
 
 
         /**
@@ -68,6 +100,15 @@ class Graph {
          * @return false 
          */
         bool isDirected();
+
+
+        /**
+         * @brief Returns the degree of the vertex
+         * 
+         * @param vertex_id ID of the Vertex
+         * @return int Degree
+         */
+        int Get_Degree(int vertex_id);
 
 
         /**
@@ -94,15 +135,6 @@ class Graph {
          * @return ** T Data of the desired Vertex
          */
         T Get_Vertex(int vertex_id);
-
-
-        /**
-         * @brief Returns the degree of the vertex
-         * 
-         * @param vertex_id ID of the Vertex
-         * @return int Degree
-         */
-        int Get_Degree(int vertex_id);
         
 
         /**
@@ -116,6 +148,25 @@ class Graph {
 
 
         /**
+         * @brief 
+         * 
+         * @param index 
+         * @return Z 
+         */
+        Z Get_EdgeByIndex(int index);
+
+
+        /**
+         * @brief Returns the edge between 2 vertices
+         * 
+         * @param idx1
+         * @param idx2
+         * @return ** Z Edge
+         */
+        Z Get_EdgeBetweenVertices(int idx1, int idx2);
+
+
+        /**
          * @brief Returns the indices of the two vertex ends corresponding to the given edge
          *  
          * @param edge_idx index of edge in global Edge vector.
@@ -123,14 +174,22 @@ class Graph {
          */
         std::pair<int, int> Get_EdgeEnds(int edge_idx);
 
+        /**
+         * @brief Get all edges incident to given vertex
+         * 
+         * @param vertex_id 
+         * @return std::vector<Z> 
+         */
+        std::vector<Z> Get_IncidentEdges(int vertex_id);
+
 
         /**
-         * @brief 
+         * @brief Get all vertices adjacent to given vertex
          * 
-         * @param index 
-         * @return Z 
+         * @param vertex_id 
+         * @return std::vector<Z> 
          */
-        Z Get_EdgeByIndex(int index);
+        std::vector<T> Get_AdjacentVertices(int vertex_id);
 
 
         /**
@@ -142,24 +201,6 @@ class Graph {
          */
         T Get_AdjacentVertex(int vertex_id, int adjacent_id);
 
-        /**
-         * @brief Returns the edge between 2 vertices
-         * 
-         * @param idx1
-         * @param idx2
-         * @return ** Z Edge
-         */
-        Z Get_AdjacentEdge(int idx1, int idx2);
-
-
-        /**
-         * @brief Returns all Vertices in the form of a pair.
-         *          ||| First Element in Pair: Number of Vertices in Graph.
-         *          ||| Second Element in Pair: Vector array of all Vertices.
-         * 
-         * @return ** vector<Vertex<T, Z>>
-         */
-        vector<Vertex<T, Z>> Get_Graph();
 
 
         /**
@@ -175,7 +216,7 @@ class Graph {
 
 
         /**
-         * @brief Makes an edge connection between 2 Vertices in the Graph.
+         * @brief Makes an edge connection from Vertex 1 to Vertex 2 in the Graph.
          * 
          * @param vertex1_ID ID of Vertex 1 in the connection.
          * @param vertex2_ID ID of Vertex 2 in the connection.
@@ -202,7 +243,7 @@ class Graph {
          * @param vertex_id vertex to update
          * @param data new data
          */
-        void Update_Data(int vertex_id, T data);
+        void Update_VertexData(int vertex_id, T data);
 
 
         /**
@@ -212,29 +253,32 @@ class Graph {
          * @param idx2 index of vertex whose edge will be updated
          * @param data new data
          */
-        void Update_Edge(int idx1, int idx2, Z data);
+        void Update_EdgeData(int idx1, int idx2, Z data);
 
 
         /**
-         * @brief Performs Depth First Search. (Recursively)
+         * @brief Performs Depth First Traversal of the Graph. (Recursively)
          * 
-         * @param target_data 
          * @param current_vertex 
          * @param visited - Array of visited vertices in the graph
-         * @return Vertex<T, Z> Returns the vertex if found, NULL if not.
          */
-        Vertex<T, Z> DFS(T target_data, int current_vertex, vector<int> visited);
+        void DFS(int current_vertex, vector<int> visited);
 
 
         /**
-         * @brief Performs Breadth First Search.
+         * @brief Performs Breadth First Traversal of the Graph.
          * 
-         * @param target_data 
          * @param current_vertex 
-         * @return Vertex<T, Z> Returns the vertex if found, NULL if not.
          */
-        Vertex<T, Z> BFS(T target_data, int current_vertex);
+        void BFS(int current_vertex);
 
+
+        /**
+         * @brief Performs Depth First Traversal of the Graph. (Iteratively)
+         * 
+         * @param current_vertex 
+         */
+        void DFS_Iterative(int current_vertex);
         
     
         /**
@@ -254,23 +298,138 @@ class Graph {
               
 };
 
+// Definitions Below--------------------------------------------------------------------------------------------------
 
 
-// Definition----------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Private------------------------------------------------------------------------------------------------------
+template <typename T, typename Z>
+bool Graph<T, Z>::beenVisited(int vertex, std::vector<int> visited) {
+    
+    for (int i = 0; i < visited.size(); i++) {
+
+        if (vertex == visited[i]) {
+            return true;
+        }          
+    } 
+
+    return false;   
+}
+
+template <typename T, typename Z>
+void Graph<T, Z>::Delete_Edge(int id) {
+
+    typename std::vector<Edge<Z>>::iterator it = Edges.begin();
+    advance(it, id);
+    Edges.erase(it);
+    Update_EdgeIDs();
+}
+
+
+template <typename T, typename Z>
+void Graph<T, Z>::Update_EdgeIDs() {
+
+    for (int i = 0; i < Edges.size(); i++) {
+        
+        if (Edges[i].edge_id != i) {
+
+            Update_EdgeIDHelper(Edges[i].edge_id, Edges[i].vertexA, i);
+            Update_EdgeIDHelper(Edges[i].edge_id, Edges[i].vertexB, i);
+            Edges[i].edge_id = i;
+        }
+    }
+}
+
+template <typename T, typename Z>
+void Graph<T, Z>::Update_EdgeIDHelper(int old_edge_id, int vertex_id, int new_edge_id) {
+
+    for (int i = 0; i < Vertices[vertex_id].edges.size(); i++) {
+
+        if (Vertices[vertex_id].edges[i] == old_edge_id) {
+
+            Vertices[vertex_id].edges[i] = new_edge_id;
+            break;
+        }
+    }
+}
+
+// Public----------------------------------------------------------------------------------------------------
 template <typename T, typename Z>        
 Graph<T, Z>::Graph() {
 
-    Directed = false;
+    Directed = NONE;
     RecentVertexID = 0;
 }
 
 
 template <typename T, typename Z>        
-Graph<T, Z>::Graph(std::vector<Vertex<T, Z>> adjacency_list, bool state) : G(adjacency_list) {
+Graph<T, Z>::Graph(int state) : Directed(state) {
+
+    RecentVertexID = 0;
+}
+
+
+template <typename T, typename Z>  
+void Graph<T, Z>::SetGraphType(int state) {
 
     Directed = state;
-    G = adjacency_list;
-    RecentVertexID = 0;
 }
 
 
@@ -278,7 +437,14 @@ Graph<T, Z>::Graph(std::vector<Vertex<T, Z>> adjacency_list, bool state) : G(adj
 template <typename T, typename Z>
 bool Graph<T, Z>::isDirected() {
 
-    return Directed;
+    return Directed > 0;
+}
+
+
+template <typename T, typename Z>
+int Graph<T, Z>::Get_Degree(int vertex_id) {
+
+    return Vertices[vertex_id].adjacents.size();
 }
 
 
@@ -286,7 +452,7 @@ bool Graph<T, Z>::isDirected() {
 template <typename T, typename Z>
 int Graph<T, Z>::Get_NumOfVertices() {
 
-    return G.size();
+    return Vertices.size();
 }
 
 template <typename T, typename Z>
@@ -300,44 +466,28 @@ int Graph<T, Z>::Get_NumOfEdges() {
 template <typename T, typename Z>
 T Graph<T, Z>::Get_Vertex(int vertex_id) {
 
-    if (vertex_id < 0 || vertex_id >= G.size()) {
-        std::cout << "Error: This Vertex Index doesn't exist." << std::endl;
+    if (vertex_id < 0 || vertex_id >= Vertices.size()) {
+        std::cout << "Error: This Vertex Index [" << vertex_id << "] doesn't exist." << std::endl;
     }
     
-    return G[vertex_id].data;
-}
-
-template <typename T, typename Z>
-int Graph<T, Z>::Get_Degree(int vertex_id) {
-
-    return G[vertex_id].adjacents.size();
+    return Vertices[vertex_id].data;
 }
 
 template <typename T, typename Z>
 Z Graph<T, Z>::Get_Edge(int vertex_id, int edge_idx) {
 
-    if (edge_idx < 0 || edge_idx >= G[vertex_id].edges.size()) {
+    if (edge_idx < 0 || edge_idx >= Vertices[vertex_id].edges.size()) {
         std::cerr << "Error: Edge Index " << edge_idx << " is Invalid. Cannot get Edge." << std::endl;
     }
 
-    if (vertex_id < 0 || vertex_id >= G.size()) {
+    if (vertex_id < 0 || vertex_id >= Vertices.size()) {
         std::cerr << "Error: Vertex Index " << vertex_id << " is Invalid. Cannot get Edge." << std::endl;
     }
 
-    int index = G[vertex_id].edges[edge_idx];
+    int index = Vertices[vertex_id].edges[edge_idx];
     return Edges[index].weight;
 }
 
-template <typename T, typename Z>
-std::pair<int, int> Graph<T, Z>::Get_EdgeEnds(int edge_idx) {
-
-    if (edge_idx < 0 || edge_idx >= Edges.size()) {
-        std::cerr << "Error: Edge Index " << edge_idx << " is Invalid. Cannot get Edge." << std::endl;
-    }
-
-    return std::make_pair(Edges[edge_idx].vertexA, Edges[edge_idx].vertexB);
-
-}
 
 template <typename T, typename Z>
 Z Graph<T, Z>::Get_EdgeByIndex(int index) {
@@ -348,42 +498,26 @@ Z Graph<T, Z>::Get_EdgeByIndex(int index) {
 
 
 template <typename T, typename Z>
-T Graph<T, Z>::Get_AdjacentVertex(int vertex_id, int adjacent_id) {
+Z Graph<T, Z>::Get_EdgeBetweenVertices(int idx1, int idx2) {
 
-    if (adjacent_id < 0 || adjacent_id >= G[vertex_id].adjacents.size()) {
-        std::cerr << "Error: Adjacent Index " << adjacent_id << " is Invalid. Cannot get Vertex." << std::endl;
+    if ((idx1 < 0 || idx1 >= Vertices.size())) {
+
+        std::cerr << "Error: Vertex 1 Index " << idx1 << " is Invalid. Cannot get Edge." << std::endl;
     }
 
-    if (vertex_id < 0 || vertex_id >= G.size()) {
-        std::cerr << "Error: Vertex Index " << vertex_id << " is Invalid. Cannot get Vertex." << std::endl;
-    }
+    if ((idx2 < 0 || idx2 >= Vertices.size())) {
 
-    int index = G[vertex_id].adjacents[adjacent_id];
-    return G[index].data;
-}
-
-
-template <typename T, typename Z>
-Z Graph<T, Z>::Get_AdjacentEdge(int idx1, int idx2) {
-
-    if ((idx1 < 0 || idx1 >= G.size())) {
-
-        std::cerr << "Error: Index " << idx1 << " is Invalid. Cannot get Edge." << std::endl;
-    }
-
-    if ((idx2 < 0 || idx2 >= G.size())) {
-
-        std::cerr << "Error: Index " << idx2 << " is Invalid. Cannot get Edge." << std::endl;
+        std::cerr << "Error: Vertex 2 Index " << idx2 << " is Invalid. Cannot get Edge." << std::endl;
     }
 
     if (idx1 == idx2) {
 
-        std::cerr << "Error: Index " << idx1 << " = Index " << idx2 << std::endl;
+        std::cerr << "Error: Vertex 1 Index " << idx1 << " = Vertex 2 Index " << idx2 << std::endl;
     }
 
-    for (int i = 0; i < G[idx1].adjacents.size(); i++) {
+    for (int i = 0; i < Vertices[idx1].adjacents.size(); i++) {
 
-        int edge_idx = G[idx1].adjacents[i];
+        int edge_idx = Vertices[idx1].adjacents[i];
 
         if (Edges[edge_idx].vertexA == idx2 || Edges[edge_idx].vertexB == idx2)
             return Edges[edge_idx].weight;
@@ -393,10 +527,58 @@ Z Graph<T, Z>::Get_AdjacentEdge(int idx1, int idx2) {
 
 
 template <typename T, typename Z>
-std::vector<Vertex<T, Z>> Graph<T, Z>::Get_Graph() {
-    
-    return G;
+std::pair<int, int> Graph<T, Z>::Get_EdgeEnds(int edge_idx) {
+
+    if (edge_idx < 0 || edge_idx >= Edges.size()) {
+        std::cerr << "Error: Edge Index " << edge_idx << " is Invalid. Cannot get Edge." << std::endl;
+    }
+
+    return std::make_pair(Edges[edge_idx].vertexA, Edges[edge_idx].vertexB);
 }
+
+
+template <typename T, typename Z>
+std::vector<Z> Graph<T, Z>::Get_IncidentEdges(int vertex_id) {
+
+    std::vector<Z> incident_list;
+    for (int i = 0; i < Vertices[vertex_id].edges.size(); i++) {
+
+        int edge_id = Vertices[vertex_id].edges[i];
+        //std::cout << "Edge ID: " << edge_id << " Num of Edges: " << Edges.size() << std::endl;
+        incident_list.push_back(Edges[edge_id].weight);
+    }
+    return incident_list;
+}
+
+
+template <typename T, typename Z>
+std::vector<T> Graph<T, Z>::Get_AdjacentVertices(int vertex_id) {
+
+    std::vector<T> adjacent_list;
+    for (int i = 0; i < Vertices[vertex_id].adjacents.size(); i++) {
+        int adjacent_id = Vertices[vertex_id].adjacents[i];
+        adjacent_list.push_back(Vertices[adjacent_id].data);
+    }
+    return adjacent_list;
+}
+
+
+
+template <typename T, typename Z>
+T Graph<T, Z>::Get_AdjacentVertex(int vertex_id, int adjacent_id) {
+
+    if (adjacent_id < 0 || adjacent_id >= Vertices[vertex_id].adjacents.size()) {
+        std::cerr << "Error: Adjacent Index " << adjacent_id << " is Invalid. Cannot get Vertex." << std::endl;
+    }
+
+    if (vertex_id < 0 || vertex_id >= Vertices.size()) {
+        std::cerr << "Error: Vertex Index " << vertex_id << " is Invalid. Cannot get Vertex." << std::endl;
+    }
+
+    int index = Vertices[vertex_id].adjacents[adjacent_id];
+    return Vertices[index].data;
+}
+
 
 
 template <typename T, typename Z>
@@ -404,9 +586,9 @@ T Graph<T, Z>::Add_Vertex(T data, bool connected, Z weight) {
 
     Vertex<T, Z> new_vertex;
     new_vertex.data = data;
-    new_vertex.id = G.size();
+    new_vertex.id = Vertices.size();
     new_vertex.err = 0;
-    G.push_back(new_vertex);
+    Vertices.push_back(new_vertex);
 
     if (connected) {
 
@@ -421,15 +603,15 @@ T Graph<T, Z>::Add_Vertex(T data, bool connected, Z weight) {
 template <typename T, typename Z>
 void Graph<T, Z>::Add_Edge(int vertex1_ID, int vertex2_ID, Z weight) {
 
-    if ((vertex1_ID < 0 || vertex1_ID > G.size() - 1)) {
+    if ((vertex1_ID < 0 || vertex1_ID > Vertices.size() - 1)) {
 
-        std::cerr << "Error: Index " << vertex1_ID << " is Invalid. Cannot remove Edge." << std::endl;
+        std::cerr << "Error: Vertex 1 Index " << vertex1_ID << " is Invalid. Cannot add Edge." << std::endl;
         return;
     }
 
-    if ((vertex2_ID < 0 || vertex2_ID > G.size() - 1)) {
+    if ((vertex2_ID < 0 || vertex2_ID > Vertices.size() - 1)) {
 
-        std::cerr << "Error: Index " << vertex2_ID << " is Invalid. Cannot remove Edge." << std::endl;
+        std::cerr << "Error: Vertex 2 Index " << vertex2_ID << " is Invalid. Cannot add Edge." << std::endl;
         return;
     }
 
@@ -441,13 +623,23 @@ void Graph<T, Z>::Add_Edge(int vertex1_ID, int vertex2_ID, Z weight) {
     new_edge.weight = weight;
 
     // Edge from V1 to V2
-    G[vertex1_ID].edges.push_back(new_edge.edge_id);
-    G[vertex1_ID].adjacents.push_back(vertex2_ID);
+    if (Directed == FORWARD) {
+        Vertices[vertex1_ID].edges.push_back(new_edge.edge_id);
+        Vertices[vertex1_ID].adjacents.push_back(vertex2_ID);
+    }
 
-    // Edge from V2 to V1 (If Undirected)
-    if (!Directed) {
-        G[vertex2_ID].edges.push_back(new_edge.edge_id);
-        G[vertex2_ID].adjacents.push_back(vertex1_ID);
+    // Edge from V2 to V1
+    if (Directed == BACKWARD) {
+        Vertices[vertex2_ID].edges.push_back(new_edge.edge_id);
+        Vertices[vertex2_ID].adjacents.push_back(vertex1_ID);
+    }
+    
+    // Edge from V1 to V2 AND V2 to V1
+    if (Directed == NONE) {
+        Vertices[vertex1_ID].edges.push_back(new_edge.edge_id);
+        Vertices[vertex1_ID].adjacents.push_back(vertex2_ID);
+        Vertices[vertex2_ID].edges.push_back(new_edge.edge_id);
+        Vertices[vertex2_ID].adjacents.push_back(vertex1_ID);
     }
 
     Edges.push_back(new_edge);
@@ -458,85 +650,90 @@ void Graph<T, Z>::Add_Edge(int vertex1_ID, int vertex2_ID, Z weight) {
 template <typename T, typename Z>
 void Graph<T, Z>::Remove_Edge(int index1, int index2) {
 
-    if ((index1 < 0 || index1 > G.size() - 1)) {
+    if ((index1 < 0 || index1 > Vertices.size() - 1)) {
 
-        std::cerr << "Error: Index " << index1 << " is Invalid. Cannot remove Edge." << std::endl;
+        std::cerr << "Error: Vertex 1 Index " << index1 << " is Invalid. Cannot remove Edge." << std::endl;
         return;
     }
 
-    if ((index2 < 0 || index2 > G.size() - 1)) {
+    if ((index2 < 0 || index2 > Vertices.size() - 1)) {
 
-        std::cerr << "Error: Index " << index2 << " is Invalid. Cannot remove Edge." << std::endl;
+        std::cerr << "Error: Vertex 2 Index " << index2 << " is Invalid. Cannot remove Edge." << std::endl;
         return;
     }
 
-    // Vector iterators are less effiicient than list ones at removals from the middle, but it'll work for now. 
-    typename std::vector<int>::iterator iter1 = G[index1].edges.begin();
-    typename std::vector<int>::iterator iter2 = G[index2].edges.begin();
+    int edge_index = -1;
+    typename std::vector<int>::iterator edge_iter1 = Vertices[index1].edges.begin();
+    typename std::vector<int>::iterator edge_iter2 = Vertices[index2].edges.begin();
+    typename std::vector<int>::iterator adjacent_iter1 = Vertices[index1].adjacents.begin();
+    typename std::vector<int>::iterator adjacent_iter2 = Vertices[index2].adjacents.begin();
 
     // Remove Edge from Index 1 Side
-    for (int i = 0; i < G[index1].adjacents.size(); i++) {
+    for (int i = 0; i < Vertices[index1].adjacents.size(); i++) {
 
-        if (G[index1].adjacents[i] == index2) {
+        if (Vertices[index1].adjacents[i] == index2) {
 
-            // TODO: Also remove attached vertex from the 'adjacents' array
-            G[index1].edges.erase(iter1);
+            edge_index = *edge_iter1;
+            Vertices[index1].edges.erase(edge_iter1);
+            Vertices[index1].adjacents.erase(adjacent_iter1);
             break;
         }
-        else
-            iter1++;
+        else {
+            edge_iter1++;
+            adjacent_iter1++;
+        }
     }
 
     // Remove Edge from Index 2 Side
-    for (int i = 0; i < G[index2].adjacents.size(); i++) {
+    for (int i = 0; i < Vertices[index2].adjacents.size(); i++) {
 
-        if (G[index2].adjacents[i] == index1) {
+        if (Vertices[index2].adjacents[i] == index1) {
 
-            // TODO: Also remove attached vertex from the 'adjacents' array
-            G[index2].edges.erase(iter2);
+            edge_index = *edge_iter2;
+            Vertices[index2].edges.erase(edge_iter2);
+            Vertices[index2].adjacents.erase(adjacent_iter2);
             break;
         }
-        else
-            iter2++;
+        else {
+            edge_iter2++;
+            adjacent_iter1++;
+        }    
     }
 
-    // TODO: Currently no way to handle updating the number of edges. 
-        // If you delete edge from somewhere in middle, the edge index order is thrown off
-
+    if (edge_index > -1) { Delete_Edge(edge_index); }
 }
 
 
-
 template <typename T, typename Z>
-void Graph<T, Z>::Update_Data(int vertex_id, T data) {
+void Graph<T, Z>::Update_VertexData(int vertex_id, T data) {
 
-    if (vertex_id < 0 || vertex_id >= G.size()) {
+    if (vertex_id < 0 || vertex_id >= Vertices.size()) {
         std::cout << "This Index doesn't exist." << std::endl;
         return;
     }
     
-    G[vertex_id].data = data;
+    Vertices[vertex_id].data = data;
 }
 
 
 
 template <typename T, typename Z>
-void Graph<T, Z>::Update_Edge(int idx1, int idx2, Z data) {
+void Graph<T, Z>::Update_EdgeData(int idx1, int idx2, Z data) {
 
-    if ((idx1 < 0 || idx1 >= G.size())) {
+    if ((idx1 < 0 || idx1 >= Vertices.size())) {
 
-        std::cerr << "Error: Index " << idx1 << " is Invalid. Cannot update Edge." << std::endl;
+        std::cerr << "Error: Vertex 1 Index " << idx1 << " is Invalid. Cannot update Edge." << std::endl;
     }
 
-    if ((idx2 < 0 || idx2 >= G.size())) {
+    if ((idx2 < 0 || idx2 >= Vertices.size())) {
 
-        std::cerr << "Error: Index " << idx2 << " is Invalid. Cannot update Edge." << std::endl;
+        std::cerr << "Error: Vertex 2 Index " << idx2 << " is Invalid. Cannot update Edge." << std::endl;
     }
 
     // Update edge
-    for (int i = 0; i < G[idx1].adjacents.size(); i++) {
-        int edge_idx1 = G[idx1].edges[i];
-        if (G[idx1].adjacents[i] == idx2) {
+    for (int i = 0; i < Vertices[idx1].adjacents.size(); i++) {
+        int edge_idx1 = Vertices[idx1].edges[i];
+        if (Vertices[idx1].adjacents[i] == idx2) {
             Edges[edge_idx1].weight = data;
             break;
         }
@@ -545,65 +742,37 @@ void Graph<T, Z>::Update_Edge(int idx1, int idx2, Z data) {
 
 
 template <typename T, typename Z>
-Vertex<T, Z> Graph<T, Z>::DFS(T target_data, int current_vertex, std::vector<int> visited) {
+void Graph<T, Z>::DFS(int current_vertex, std::vector<int> visited) {
 
-    Vertex<T, Z> error;
-
-    if (current_vertex < 0 || current_vertex > G.size()){
+    if (current_vertex < 0 || current_vertex > Vertices.size()){
         std::cerr << "Invalid Vertex ID" << std::endl;
-        error.err = 0;
-        return error;
     }
-    
-    if (G[current_vertex].data == target_data)
-        return G[current_vertex];
-
 
     // Add vertex to visited list
     visited.push_back(current_vertex);
 
     // Loop through each adjacent vertex
-    bool been_visited = false;
-    for (int i = 0; i < G[current_vertex].adjacents.size(); i++) {
+    for (int i = 0; i < Vertices[current_vertex].adjacents.size(); i++) {
 
-        // Check if the adjacent has been visited.
-        for (int j = 0; j < visited.size(); j++) {
+        int adjacent = Vertices[current_vertex].adjacents[i];
 
-            if (G[current_vertex].adjacents[i] == visited[j])
-                been_visited = true;
-        }
-
-        // If not visited, continue depth search into adjacent
-        if (!been_visited) 
-            DFS(target_data, G[current_vertex].adjacents[i], visited);
-
-        else
-            been_visited = false;
-    }
-
-    // Can't go deeper
-    if (visited.size() == G.size())
-        error.err = 1;
-    
-    return error;     
+        // If adjacent has not visited, continue depth search into adjacent
+        if (!beenVisited(adjacent, visited)) 
+            DFS(adjacent, visited);
+    }    
 }
 
 
 template <typename T, typename Z>
-Vertex<T, Z> Graph<T, Z>::BFS(T target_data, int current_vertex) {
+void Graph<T, Z>::BFS(int current_vertex) {
 
     Vertex<T, Z> error;
 
-    if (current_vertex < 0 || current_vertex > G.size()){
+    if (current_vertex < 0 || current_vertex > Vertices.size()){
         std::cerr << "Invalid Vertex ID" << std::endl;
-        error.err = 0;
-        return error;
     }
-    
-    if (G[current_vertex].data == target_data)
-        return G[current_vertex];
 
-    vector<int> visited;
+    std::vector<int> visited;
     std::queue<int> task_queue;
     // Enqueue first vertex to task queue and mark as visited
     visited.push_back(current_vertex);
@@ -617,48 +786,61 @@ Vertex<T, Z> Graph<T, Z>::BFS(T target_data, int current_vertex) {
         task_queue.pop();
 
         // Loop through dequeued vertex's adjacent vertices
-        bool been_visited = false;
-        for (int i = 0; i < G[current_vertex].adjacents.size(); i++) {
+        for (int i = 0; i < Vertices[vertex].adjacents.size(); i++) {
 
-            // Check if the adjacent has been visited.
-            for (int j = 0; j < visited.size(); j++) {
+            int adjacent = Vertices[vertex].adjacents[i];
 
-                if (G[current_vertex].adjacents[i] == visited[j])
-                    been_visited = true;
-            }
-
-            // If not visited, mark it as visited and enqueue it
-            if (!been_visited) {    
-                int adjacent_id = G[current_vertex].adjacents[i];
+            // If adjacent has not visited, mark it as visited and enqueue it
+            if (!beenVisited(adjacent, visited)) {    
                 
-                // Return the adjacent vertex if data found
-                if (G[adjacent_id].data == target_data)
-                    return G[adjacent_id];
-
-                // Enqueue adjacent vertex to search task queue & mark as visited.
-                else {
-                    visited.push_back(adjacent_id);
-                    task_queue.push(adjacent_id);
-                }
+                visited.push_back(adjacent);
+                task_queue.push(adjacent);
             }
-
-            else
-                been_visited = -1;
         }
     }
-
-    error.err = 1;
-    return error;
 }
 
 
 
 template <typename T, typename Z>
+void Graph<T, Z>::DFS_Iterative(int current_vertex) {
+
+
+    if (current_vertex < 0 || current_vertex > Vertices.size()){
+        std::cerr << "Invalid Vertex ID" << std::endl;
+    }
+
+    std::stack<int> branch_stack;
+    branch_stack.push(current_vertex);
+    std::vector<int> visited;
+
+    while(branch_stack.size() > 0) {
+
+        int vertex = branch_stack.pop();
+
+        // If vertex has not visited
+        if (!beenVisited(vertex, visited)) {
+            visited.push_back(vertex);
+
+            // Check all adjacent neighbors
+            for (int i = 0; i < Vertices[vertex].adjacents.size(); i++) {
+                int neighbor = Vertices[vertex].adjacents[i];
+
+                // If neighbor has not been visited.
+                if (!beenVisited(neighbor, visited))
+                    branch_stack.push(neighbor);
+            }
+        }
+    } 
+}
+
+
+template <typename T, typename Z>
 void Graph<T, Z>::Print_Vertices() {
 
-    for (int i = 0; i < G.size(); i++) {
+    for (int i = 0; i < Vertices.size(); i++) {
 
-        std::cout << G[i].id << " -> " << G[i].data << std::endl;
+        std::cout << Vertices[i].id << " -> " << Vertices[i].data << std::endl;
     }
 }
 
@@ -667,11 +849,11 @@ void Graph<T, Z>::Print_Vertices() {
 template <typename T, typename Z>
 void Graph<T, Z>::Print_Edges() {
     
-    for (int i = 0; i < G.size(); i++) {
+    for (int i = 0; i < Vertices.size(); i++) {
 
-        for (int j = 0; j < G[i].edges.size(); j++) {
+        for (int j = 0; j < Vertices[i].edges.size(); j++) {
 
-            std::cout << G[i].id << "- " << G[i].edges[j].vertexA << "<->" << G[i].edges[j].vertexB << "  ";
+            std::cout << Vertices[i].id << "- " << Vertices[i].edges[j].vertexA << "<->" << Vertices[i].edges[j].vertexB << "  ";
         }
         
         std::cout << "\n";
@@ -683,7 +865,7 @@ void Graph<T, Z>::Print_Edges() {
 /*
  * 			TO-DO
  * 			-----
- *  - Test Code
+ *  - 
  *
  *  - 
  *  
