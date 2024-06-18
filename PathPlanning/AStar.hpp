@@ -3,32 +3,47 @@
 #include <cstdlib>
 #include <cmath>
 #include <stack>
-#include <set>
+#include <queue>
 #include <cfloat>
+#include <vector>
+#include </usr/include/eigen3/Eigen/Dense>
+#include "/usr/include/eigen3/unsupported/Eigen/CXX11/Tensor"
 using std::pair;
 using std::stack;
 using std::make_pair;
-using std::set;
-using std::cout;
-using std::endl;
+using std::vector;
+using std::queue;
+using namespace Eigen;
 
-typedef struct cell {
-    int parentX, parentY;
-    double FCost, GCost, HCost;
-}Cell; 
+namespace astar {
 
-typedef pair<int, int> CellCoordinate;
+struct Cell {
+    // int x, y, parentX, parentY;
+    // double FCost, GCost, HCost;
+
+    int x;
+    int y;
+    int parentX;
+    int parentY;
+    double FCost;
+    double GCost;
+    double HCost;
+}; 
+};
+
 
 class A_Star {
 
     private: 
         
-        int G_ROW; // Grid Width
-        int G_COL; // Grid Height
-        int **Grid; // Grid to Search
+        int WIDTH; // Grid Width
+        int HEIGHT; // Grid Height
+        Eigen::Tensor<float, 2> MAP; // Grid to Search
+        VectorXi Goal;
+        VectorXi Start;
+        std::vector<VectorXi> ThePath;
         typedef enum { MANHATTAN, DIAGONAL, EUCLID }DistanceFormula;
-        // (Below) pPair represents a Vertex (F-Cost, <x-coordinate, y-coordinate>)
-        typedef pair<float, pair<int, int>> pPair;
+
 
         /**
          * @brief Get the Manhattan Distance to goal. (An Approximate Heuristic)
@@ -36,25 +51,27 @@ class A_Star {
          *          ||| Use when your movement is restricted to 4 directions
          *              (right, left, up, down)
          * 
-         * @param currentRow Current x coordinate
-         * @param currentCol Current y coordinate
-         * @param goalCell Coordinates of the Goal cell
+         * @param x1 Current x1 coordinate
+         * @param y1 Current y1 coordinate
+         * @param x2 Current x2 coordinate
+         * @param y2 Current y2 coordinate
          * 
          * @return ** float 
          */
-        float GetManhattanDistance(int currentRow, int currentCol, CellCoordinate goalCell);
+        float Get_ManhattanDistance(int x1, int y1, int x2, int y2);
 
         /**
          * @brief Get the Diagonal Distance to goal. (An Approximate Heuristic)
          *          ||| Use when you can move in all 8 directions
          * 
-         * @param currentRow Current x coordinate
-         * @param currentCol Current y coordinate
-         * @param goalCell Coordinates of the Goal cell
+         * @param x1 Current x1 coordinate
+         * @param y1 Current y1 coordinate
+         * @param x2 Current x2 coordinate
+         * @param y2 Current y2 coordinate
          * 
          * @return ** float 
          */
-        float GetDiagonalDistance(int currentRow, int currentCol, CellCoordinate goalCell);
+        float Get_DiagonalDistance(int x1, int y1, int x2, int y2);
 
         /**
          * @brief Get the Euclidean Distance to goal. (An Approximate Heuristic)
@@ -62,67 +79,113 @@ class A_Star {
          *              using the Distance Formula.
          *          ||| For movement in any direction.
          * 
-         * @param currentRow Current x coordinate
-         * @param currentCol Current y coordinate
-         * @param goalCell Coordinates of the Goal cell
+         * @param x1 Current x1 coordinate
+         * @param y1 Current y1 coordinate
+         * @param x2 Current x2 coordinate
+         * @param y2 Current y2 coordinate
          * 
          * @return ** float 
          */
-        float GetEuclideanDistance(int currentRow, int currentCol, CellCoordinate goalCell);
+        float Get_EuclideanDistance(int x1, int y1, int x2, int y2);
 
 
         /**
          * @brief Checks whether or not the (x, y) coordinates of a given
          *          cell are valid.
          * 
-         * @param rowNum Row Number of the cell
-         * @param colNum Column Number of the cell
+         * @param x Row Number of the cell
+         * @param y Column Number of the cell
          * @return true - If Cell is Valid
          * @return false - If Cell is Not Valid
          */
-        bool isValid(int rowNum, int colNum);
+        bool isValid(int x, int y);
 
         /**
          * @brief Checks the Grid to see whether or not a given cell is blocked.
          * 
-         * @param rowNum Row Number of the cell
-         * @param colNum Column Number of the cell
+         * @param x Row Number of the cell
+         * @param y Column Number of the cell
          * @return true - If Cell is Blocked
          * @return false - If Cell is Not Blocked
          */
-        bool isBlocked(int rowNum, int colNum);
+        bool isBlocked(int x, int y);
 
-        /**
-         * @brief Calculate a given cell's H-Cost (i.e. the cell's distance from the goal cell)
-         * 
-         * @param rowNum Row Number of the current cell 
-         * @param colNum Column Number of the current cell
-         * @param goalCell The Goal Cell
-         * @param formula Type of distance calculation formula
-         * @return ** float 
-         */
-        float GetHVal(int rowNum, int colNum, CellCoordinate goalCell, DistanceFormula formula);
 
         /**
          * @brief Checks if given coordinates (x, y) match those of the Goal coordinates.
          * 
          * @param x - x coordinate
          * @param y - y coordinate
-         * @param goal - Goal Coordinates
          * @return true - If match 
          * @return false - If No match
          */
-        bool GoalReached(int x, int y, CellCoordinate goal);
+        bool isGoalReached(int x, int y);
+
 
         /**
-         * @brief A 2D array of cells whose size matches the Grid which the 
+         * @brief 
+         * 
+         * @return true 
+         * @return false 
+         */
+        bool isStartAndGoalValid();
+
+
+        /**
+         * @brief Calculate a given cell's H-Cost (i.e. the cell's distance from the goal cell)
+         * 
+         * @param x Row Number of the current cell 
+         * @param y Column Number of the current cell
+         * @param formula Type of distance calculation formula
+         * @return ** float 
+         */
+        float Get_HCost(int x, int y, DistanceFormula formula);
+
+
+        /**
+         * @brief Calculate a given cell's G-Cost (i.e. How far away that node is 
+         *          from the starting node based on the CURRENT path between them)
+         * 
+         * @param x1 Current x1 coordinate
+         * @param y1 Current y1 coordinate
+         * @param x2 Current x2 coordinate
+         * @param y2 Current y2 coordinate
+         * @param formula Type of distance calculation formula
+         * @return float 
+         */
+        float Get_GCost(int x1, int y1, int x2, int y2, DistanceFormula formula);
+
+        
+        /**
+         * @brief Out of a list of all possible cells to visit next, 
+         *      this function calculated the one with the lowest overall cost.
+         *      It just so happens to do it in a terribly inefficient way
+         * 
+         * @param uncovered 
+         * @return astar::Cell 
+         */
+        astar::Cell AReallyShitty_LowestCostNodeFunction(std::vector<astar::Cell> &uncovered);
+
+
+        /**
+         * @brief 
+         * 
+         * @param x 
+         * @param y 
+         * @param x_adjacent 
+         * @param y_adjacent 
+         * @param adjacent_cell_num 
+         */
+        void Get_AdjacentCellCoordinates(int x, int y, int &x_adjacent, int &y_adjacent, int adjacent_cell_num);
+
+
+        /**
+         * @brief A 2D array of Cell structs whose size matches the MAP the 
          *          algorithm is being performed on.
          * 
-         * @param gridWith - The number of row elements in the Matrix of Cells
-         * @param gridHeight - Height of the column elements in the Matrix of Cells
          * @return ** Cell** 
          */
-        Cell** InitMatrixOfCells(int gridWith, int gridHeight, CellCoordinate startCell);
+        astar::Cell** Init_MatrixOfCells();
 
         /**
          * @brief Initialize a boolean matrix representation of the Grid 
@@ -130,34 +193,46 @@ class A_Star {
          *          This will keep track of all visited cells, with those visited
          *          being set to true.
          * 
-         * @param gridWith Width of the Grid to be searched.
-         * @param gridHeight Height of the grid to be searched.
+         *          Holds all the cells whose details have been uncovered during the A* Process
+         *          Meaning: Every "Visited" cell along with their 8 peripheral "Viewed" cells.
+         * 
          * @return ** bool** 
          */
-        bool** InitBooleanMatrix(int gridWith, int gridHeight);
+        bool** Init_BooleanMatrix();
 
         /**
          * @brief Traces the discovered path from Goal cell back to Start Cell,
          *          then prints the path from Start to Goal.
          * 
          * @param cells Holds 2D array of the Uncovered and Visited Cells.
-         * @param goalCell Coordinates of the goal cell.
          * @return ** void 
          */
-        void PathTrace(Cell **cells, CellCoordinate goalCell);
+        void PathTrace(astar::Cell **cells);
 
  
     public:
 
         /**
-         * @brief Performs an A* search on a given Grid
-         * 
-         * @param grid The Grid that will be searched
-         * @param width Width of the Grid
-         * @param height Heigh of the Grid
+         * @brief Construct a new a star object
          * 
          */
-        A_Star(int **grid, int width, int height);
+        A_Star();
+
+        /**
+         * @brief Performs an A* search on a given Grid
+         * 
+         * @param map The Grid that will be searched
+         * 
+         */
+        A_Star(Eigen::Tensor<float, 2> map);
+
+
+        /**
+         * @brief 
+         * 
+         * @param map 
+         */
+        void Load_MAP(Eigen::Tensor<float, 2> map);
 
 
         /**
@@ -165,9 +240,9 @@ class A_Star {
          * 
          * @param startCell Starting coordinates
          * @param goalCell Goal coordinates
-         * @return ** bool Returns true if goal has reached, else false 
+         * @return ** std::vector<VectorXf> The waypoints of the path 
          */
-        bool Search(CellCoordinate startCell, CellCoordinate goalCell);
+        std::vector<VectorXi> Path(VectorXi startCell, VectorXi goalCell);
 
 };
 
