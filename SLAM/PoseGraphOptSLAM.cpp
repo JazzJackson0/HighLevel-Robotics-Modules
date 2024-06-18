@@ -1,4 +1,4 @@
-#include "../include/PoseGraphOptSLAM.hpp"
+#include "PoseGraphOptSLAM.hpp"
 
 float PoseGraphOptSLAM::Calculate_Overlap(PointCloud landmarks_a, PointCloud landmarks_b) {
 
@@ -317,6 +317,13 @@ bool PoseGraphOptSLAM::FrontEnd(PointCloud current_landmarks) {
 		RotationTranslation rot_trans = icp.RunICP_SVD(PreviousLandmarks, current_landmarks); 
 		MatrixXf R = rot_trans.rotation_matrix;
 		VectorXf t = rot_trans.translation_vector;
+
+		// TEST-----------------------------------------------------------
+		// Just testing the Least Squares version really quick
+		// VectorXf result = icp.RunICP_LeastSquares(PreviousLandmarks, current_landmarks);
+		// std::cout << "Least Squares ICP Result:" << "\n";
+		// std::cout << result.transpose() << "\n";
+		// //--------------------------------------------------------------------
 		
 		std::cout << R.rows() << " & " << t.rows() << "\n"; // Test
 		
@@ -329,8 +336,7 @@ bool PoseGraphOptSLAM::FrontEnd(PointCloud current_landmarks) {
 		pose.TransformationMatrix.topLeftCorner(2, 2) = R;
 		pose.TransformationMatrix.topRightCorner(2, 1) = t;
 
-		std::cout << pose.TransformationMatrix << "\n"; // Test
-
+		//std::cout << pose.TransformationMatrix << "\n"; // Test
 	}
 
 	else { return false; }
@@ -410,7 +416,7 @@ void PoseGraphOptSLAM::Optimize() {
 		
 		Pose updated_pose = Pose_Graph.Get_Vertex(n);
 		updated_pose.TransformationMatrix = VectorToTransformationMatrix(StateVector(i), StateVector(i+1), std::make_pair(StateVector(i+2), rotation_axes[n]));
-		Pose_Graph.Update_Data(n, updated_pose);
+		Pose_Graph.Update_VertexData(n, updated_pose);
 		n++;
 	}
 
@@ -425,7 +431,7 @@ void PoseGraphOptSLAM::Optimize() {
 			edge.TransformationMatrix = Pose_Graph.Get_Vertex(i).TransformationMatrix.inverse() 
 				* Pose_Graph.Get_AdjacentVertex(i, j).TransformationMatrix;
 
-			Pose_Graph.Update_Edge(i, j, edge);
+			Pose_Graph.Update_EdgeData(i, j, edge);
 		}
 	}
 }
@@ -446,7 +452,7 @@ PoseGraphOptSLAM::PoseGraphOptSLAM(int max_nodes, int pose_dimension, int guess_
 	OverlapTolerance = 0.1; // distance in meters
 	max_iterations = 100;
 	StateVector = VectorXf::Zero(0); // (Assuming a pose dimension of 3 [x, y, theta])
-	icp = ICP(2);
+	icp = ICP(2, 3);
 
 	std::vector<AD<float>> xs(PoseDimensions * 2);
 	std::vector<AD<float>> ys(PoseDimensions); 
@@ -475,11 +481,18 @@ void PoseGraphOptSLAM::Run(PointCloud current_landmarks, VectorXf &currentPose) 
 }
 
 
+Eigen::Tensor<float, 2> CreateMap() {
+
+	//Eigen::Tensor<float, 2> map_structure();
+	// Finish
+}
+
+
 /*
  * 			TO-DO
  * 			-----
- *  - Finish
- *   
  *  - Test Code
+ *   
+ *  - 
  * 
  *  */

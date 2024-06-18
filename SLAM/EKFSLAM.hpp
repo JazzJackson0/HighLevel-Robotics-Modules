@@ -5,6 +5,7 @@
 
 #include </usr/include/eigen3/Eigen/Dense>
 #include </usr/include/eigen3/Eigen/src/Core/Matrix.h>
+#include "/usr/include/eigen3/unsupported/Eigen/CXX11/Tensor"
 #include <cppad/cppad.hpp>
 
 #include "../FeatureExtraction/FeatureExtraction.hpp"
@@ -227,6 +228,14 @@ class EKFSlam {
 		 * @param landmarks A vector of all known landmark (x, y) positions.
 		 */
 		void SetKnownLandmarks(std::vector<VectorXf> landmarks);
+
+
+		/**
+		 * @brief 
+		 * 
+		 * @return Eigen::Tensor<float, 2> 
+		 */
+		Eigen::Tensor<float, 2> CreateMap();
 };
 
 

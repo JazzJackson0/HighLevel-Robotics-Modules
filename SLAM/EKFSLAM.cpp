@@ -155,7 +155,7 @@ VectorXf EKFSlam::GetEstimatedLandmark_h(VectorXf robot_pose_est,
 
 	// Calculate distance and angle between estimate and robot pose
 	float predicted_distance = std::sqrt((float) range_delta.dot(range_delta.transpose()));
-	float predicted_orientation = atan2(range_delta[1], range_delta[0]) - robot_pose_est[2];
+	float predicted_orientation = std::atan2(range_delta[1], range_delta[0]) - robot_pose_est[2];
 	
 	landmark_estimate << predicted_distance, predicted_orientation;
 	
@@ -453,7 +453,11 @@ void EKFSlam::SetKnownLandmarks(std::vector<VectorXf> landmarks) {
 }
 
 
+Eigen::Tensor<float, 2> CreateMap() {
 
+	//Eigen::Tensor<float, 2> map_structure();
+	// Finish
+}
 
 
 /*

@@ -8,6 +8,7 @@
 
 #include <cppad/cppad.hpp>
 #include <cppad/utility/sparse2eigen.hpp>
+#include "/usr/include/eigen3/unsupported/Eigen/CXX11/Tensor"
 //#include <cppad/core/sparse_jac.hpp>
 //#include <cppad/utility/sparse_rc.hpp>
 //#include <cppad/utility/sparse_rcv.hpp>
@@ -239,6 +240,12 @@ class PoseGraphOptSLAM {
         void Run(PointCloud current_landmarks, VectorXf &currentPose);
 
 
+		/**
+		 * @brief 
+		 * 
+		 * @return Eigen::Tensor<float, 2> 
+		 */
+		Eigen::Tensor<float, 2> CreateMap();
 };
 
 
