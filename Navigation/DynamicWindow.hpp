@@ -9,17 +9,29 @@ using namespace Eigen;
 struct Velocities {
     float trans_vel;
     float rot_vel;
+    Velocities() {}
+    Velocities(float t_vel, float r_vel) : trans_vel(t_vel), rot_vel(r_vel) {}
 };
 
 class DynamicWindowApproach {
 
     private:
 
+        VectorXf Goal;
+        VectorXf RobotPos;
+        std::vector<VectorXf> PointCloud;
+        float dist_nearing_goal;
         float smoothing;
         float heading_weight;
         float dist_weight;
         float vel_weight;
-        float time_interval = 0.1;
+        float time_interval;
+        Velocities PreviousVel;
+        float MinVel;
+        float MaxVel;
+        float VelInterval;
+
+        VectorXf Get_ClosestObstacle();
 
         float heading(float trans_vel, float rot_vel);
 
@@ -46,5 +58,9 @@ class DynamicWindowApproach {
 
         DynamicWindowApproach(float smoothing_val, float heading_w, float dist_w, float vel_w);
 
-        VectorXf Run();
+        void Set_VelocityLimits(float min_vel, float max_vel, float vel_interval);
+
+        void Set_Goal(VectorXf goal);
+
+        VectorXf Run(VectorXf robot_pos, std::vector<VectorXf> point_cloud);
 };
