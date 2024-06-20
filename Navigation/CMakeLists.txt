@@ -7,6 +7,8 @@ set(TARGET_A dynamicWindowTest)
 set(SOURCES_A ../UnitTests/not_using/DynamicWindowTest.cpp DynamicWindow.cpp)
 set(TARGET_B frontierExplorerTest)
 set(SOURCES_B ../UnitTests/not_using/FrontierExplorationTest.cpp FrontierExploration.cpp)
+set(TARGET_C pidTest)
+set(SOURCES_C ../UnitTests/not_using/PIDTest.cpp PID.cpp)
 # set(CMAKE_BUILD_TYPE Debug)
 
 #Set-up Google Test
@@ -29,6 +31,11 @@ add_executable(${TARGET_B} ${SOURCES_B})
 target_link_libraries(${TARGET_B} PUBLIC gtest_main) # Link GoogleTest's main() to Executable
 target_link_libraries (${TARGET_B} ${Eigen_LIBRARIES})
 
+add_executable(${TARGET_C} ${SOURCES_C})
+target_link_libraries(${TARGET_C} PUBLIC gtest_main) # Link GoogleTest's main() to Executable
+target_link_libraries (${TARGET_C} ${Eigen_LIBRARIES})
+
 # Tell CMake the Target is a Unit Test
 add_test(NAME ${TARGET_A} COMMAND ${TARGET_A})
 add_test(NAME ${TARGET_B} COMMAND ${TARGET_B})
+add_test(NAME ${TARGET_C} COMMAND ${TARGET_C})
