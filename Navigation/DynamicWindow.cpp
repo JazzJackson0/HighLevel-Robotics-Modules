@@ -6,7 +6,7 @@
 
 VectorXf DynamicWindowApproach::Get_ClosestObstacle() {
 
-    float closest_dist = std::numeric_limits<float>::max();;
+    float closest_dist = std::numeric_limits<float>::max();
     float closest_idx = 0;
 
     for (int i = 0; i < PointCloud.size(); i++) {
