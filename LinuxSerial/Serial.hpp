@@ -68,6 +68,13 @@ class Serial {
          */
         int8_t UARTInit(uint8_t uartNum);
 
+        /**
+         * @brief 
+         * 
+         * @param uartNum 
+         */
+        void UARTDeInit(uint8_t uartNum);
+
 
         /**
          * @brief Initialize the I2C Bus
@@ -80,15 +87,30 @@ class Serial {
 
 
         /**
+         * @brief 
+         * 
+         * @param i2cNum 
+         */
+        void I2CDeInit(uint8_t i2cNum);
+
+        /**
          * @brief Initialize the SPI Bus
          * 
          * @param spiNum 0: /dev/spidev0.0, 1: /dev/spidev0.1
-         * @param mode 
+         * @param spi_mode 
          * @param speed_hz Clock Speed
-         * @param bits Num of Bits to read/write on every SPI access
+         * @param spi_bits Num of Bits to read/write on every SPI access
          * @return int8_t 
          */
-        int8_t SPIInit(uint8_t spiNum, uint8_t mode, uint32_t speed_hz, uint8_t bits);
+        int8_t SPIInit(uint8_t spiNum, uint8_t spi_mode, uint32_t speed_hz, uint8_t spi_bits);
+
+
+        /**
+         * @brief 
+         * 
+         * @param spiNum 
+         */
+        void SPIDeInit(uint8_t spiNum);
 
 
         /**
@@ -139,7 +161,7 @@ class Serial {
          * @param byteNum Number of bytes to write
          * @return int 
          */
-        int8_t I2CWrite(int &i2c_bus, int8_t *dataBytes, int byteNum);
+        int8_t I2CWrite(int8_t &i2c_bus, int8_t *dataBytes, int byteNum);
 
 
         /**
@@ -150,7 +172,7 @@ class Serial {
          * @param byteNum Number of bytes to read
          * @return int 
          */
-        int8_t I2CRead(int &i2c_bus, int8_t *dataBytes, int byteNum);
+        int8_t I2CRead(int8_t &i2c_bus, int8_t *dataBytes, int byteNum);
 
 
         /**

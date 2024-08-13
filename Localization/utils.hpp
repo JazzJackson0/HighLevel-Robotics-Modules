@@ -10,3 +10,8 @@ struct PointCloud {
 	std::vector<VectorXf> points;
 	std::vector<float> weights;
 };
+
+struct ControlCommand {
+	float trans_vel; 
+	float rot_vel;
+};

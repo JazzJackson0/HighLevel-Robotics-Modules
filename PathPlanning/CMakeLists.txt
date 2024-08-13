@@ -4,11 +4,11 @@ project(PathPlanning)
 
 # Set Variables
 set(TARGET_A aStarTest)
-set(SOURCES_A ../UnitTests/AStarTest.cpp AStar.cpp)
+set(SOURCES_A ../UnitTests/AStarTest.cpp AStar.cpp PathUtil.cpp)
 set(TARGET_B bugTest)
 set(SOURCES_B ../UnitTests/not_using/BUGTest.cpp BUG.cpp)
 set(TARGET_C rrtTest)
-set(SOURCES_C ../UnitTests/RRTTest.cpp RRT.cpp)
+set(SOURCES_C ../UnitTests/RRTTest.cpp RRT.cpp PathUtil.cpp)
 set(CMAKE_BUILD_TYPE Debug)
 
 #Set-up Google Test

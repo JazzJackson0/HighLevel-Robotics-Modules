@@ -37,6 +37,7 @@ class Graph {
         std::vector<Edge<Z>> Edges;
         int RecentVertexID;   
         typedef enum { NONE, FORWARD, BACKWARD }EdgeDirection;
+        typename std::vector<Vertex<T, Z>>::iterator it;
 
         /**
          * @brief Helper for DFS_Path()
@@ -279,8 +280,35 @@ class Graph {
          * @param current_vertex 
          */
         void DFS_Iterative(int current_vertex);
+
+        /**
+         * @brief 
+         * 
+         */
+        void iterator_start();
+
+        /**
+         * @brief 
+         * 
+         * @return true 
+         * @return false 
+         */
+        bool iterator_hasNext();
+
+        /**
+         * @brief 
+         * 
+         */
+        void iterator_next();
+
+        /**
+         * @brief 
+         * 
+         * @return T
+         */
+        T iterator_get_data();
+
         
-    
         /**
          * @brief Prints all Vertices in the Graph.
          * 
@@ -834,6 +862,31 @@ void Graph<T, Z>::DFS_Iterative(int current_vertex) {
     } 
 }
 
+template <typename T, typename Z>
+void Graph<T, Z>::iterator_start() {
+    it = Vertices.begin();
+}
+
+template <typename T, typename Z>
+bool Graph<T, Z>::iterator_hasNext() {
+    if (it != Vertices.end()) {
+        return true;
+    }
+    return false;
+}
+
+template <typename T, typename Z>
+void Graph<T, Z>::iterator_next() {
+    if (it != Vertices.end()) {
+        it++;
+    }
+}
+
+template <typename T, typename Z>
+T Graph<T, Z>::iterator_get_data() {
+    return it->data;
+}
+
 
 template <typename T, typename Z>
 void Graph<T, Z>::Print_Vertices() {
@@ -859,6 +912,8 @@ void Graph<T, Z>::Print_Edges() {
         std::cout << "\n";
     }
 }
+
+
 
 
 

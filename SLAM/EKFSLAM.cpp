@@ -1,5 +1,138 @@
 #include "EKFSLAM.hpp"
 
+void EKFSlam::propagateFreeSpace() {
+
+	int width = map_structure.dimension(1);
+	int height = map_structure.dimension(0);
+	VectorXi robot_index = map_builder.MapCoordinate_to_DataStructureIndex(PreviousPose);
+    int x_robot = robot_index[0];
+    int y_robot = robot_index[1];
+
+    // Direction vectors for 8-connected neighbors
+    int directions[8][2] = { {1, 0}, {0, 1}, {-1, 0}, {0, -1}, 
+                             {1, 1}, {1, -1}, {-1, 1}, {-1, -1} };
+
+    std::queue<VectorXi> q;
+    q.push(robot_index);
+
+    while (!q.empty()) {
+        VectorXi index = q.front();
+		int x = index[0];
+		int y = index[1];
+        q.pop();
+
+        // Check all 8-connected neighbors
+        for (auto& dir : directions) {
+            int nx = x + dir[0];
+            int ny = y + dir[1];
+
+            // Check bounds
+            if (nx < 0 || nx >= width || ny < 0 || ny >= height) {
+                continue;
+            }
+
+            // Check if within the robot's view range
+            if (std::sqrt(std::pow(nx - x_robot, 2) + std::pow(ny - y_robot, 2)) < VIEW_RANGE) {
+
+                if (map_structure(ny, nx) == 0.5 && isVisible(nx, ny, x_robot, y_robot)) {
+                    map_structure(ny, nx) = 0.0;
+					VectorXi new_index(2);
+					new_index << nx, ny;
+                    q.push(new_index);
+                }
+            }
+        }
+    }
+}
+
+bool EKFSlam::isVisible(int x, int y, int x_robot, int y_robot) {
+    
+	if (map_structure(y, x) == 1.0) { return false;	}
+
+    // Bresenham's line algorithm for line of sight checking
+    int dx = std::abs(x - x_robot);
+    int dy = std::abs(y - y_robot);
+    int sx = (x_robot < x) ? 1 : -1;
+    int sy = (y_robot < y) ? 1 : -1;
+    int err = dx - dy;
+
+    int x_curr = x_robot;
+    int y_curr = y_robot;
+
+    while (true) {
+		// Clear line of sight
+        if (x_curr == x && y_curr == y) { return true; }
+
+		// Line of sight blocked by obstacle
+        if (map_structure(y_curr, x_curr) == 1.0) { return false; }
+
+        int e2 = 2 * err;
+        if (e2 > -dy) {
+            err -= dy;
+            x_curr += sx;
+        }
+        if (e2 < dx) {
+            err += dx;
+            y_curr += sy;
+        }
+    }
+}
+
+// Test this!!
+Eigen::Tensor<float, 2> EKFSlam::UpdateMap() {
+
+	VectorXi robot_index = map_builder.MapCoordinate_to_DataStructureIndex(PreviousPose);
+	int width = map_structure.dimension(1);
+	int height = map_structure.dimension(0);
+
+	for (int i = 0; i < Correspondence.size(); i++) {
+
+		for (int j = 0; j < Correspondence[i].points.size(); j++) {
+
+			VectorXf point(2);
+			point << Correspondence[i].points[i].x, Correspondence[i].points[i].y;
+			VectorXi beam_index = map_builder.MapCoordinate_to_DataStructureIndex(point);
+
+			if ((beam_index[0] >= 0 && beam_index[0] < width) && (beam_index[1] >= 0 && beam_index[1] < height)) {
+				map_structure(beam_index[1], beam_index[0]) = 1.f;
+
+				// Estimate Free Space: Bresenham's line algorithm for ray-casting
+				int dx = std::abs(beam_index[0] - robot_index[0]);
+				int dy = std::abs(beam_index[1] - robot_index[1]);
+				int sx = (robot_index[0] < beam_index[0]) ? 1 : -1;
+				int sy = (robot_index[1] < beam_index[1]) ? 1 : -1;
+				int err = dx - dy;
+
+				int x = robot_index[0];
+				int y = robot_index[1];
+
+				while (true) {
+
+					if (map_structure(y, x) == 0.5) { map_structure(y, x) = 0.0; }
+
+					if (map_structure(y, x) == 1.0) { break; }
+
+					// Stop once end of line is reached
+					if (x == beam_index[0] && y == beam_index[1]) { break; }
+
+					// Climb the slope between robot and beam point
+					int e2 = 2 * err;
+					if (e2 > -dy) {
+						err -= dy;
+						x += sx;
+					}
+					if (e2 < dx) {
+						err += dx;
+						y += sy;
+					}
+				}
+			}
+		}
+	}
+	propagateFreeSpace();
+	return map_structure;
+}
+
 void EKFSlam::Build_StateVector() {
 
 	int LandmarkDim_X_N = (LandmarkDimensions * NumOfLandmarks);
@@ -396,6 +529,7 @@ EKFSlam::EKFSlam(int pose_dim, int landmark_dim) : PoseDimensions(pose_dim), Lan
 		
 		NumOfLandmarks = 0;
 		PreviousPose = VectorXf::Zero(3);
+		MapBuilder map_builder();
 		
 		// Set Sizes of Domain & Range Space vectors
 		std::vector<AD<float>> x_g(PoseDimensions); // Number of variables to differentiate w.r.t
@@ -431,16 +565,18 @@ void EKFSlam::SetInitialState(Eigen::VectorXf initial_position, float _process_u
 }
 
 
-void EKFSlam::Run(PointCloud current_scan, VectorXf current_pose, ControlCommand ctrl) {
+Eigen::Tensor<float, 2> EKFSlam::Run(PointCloud current_scan, VectorXf current_pose, ControlCommand ctrl) {
 	
 	std::vector<Landmark> landmarks = feature_extractor.LandmarksFromScan(current_scan, current_pose);
 
 	Prediction(current_pose, ctrl);
 	Correction(landmarks);
 
-	std::cout << "CURRENT MAP:" << std::endl;
-	std::cout << StateVector.transpose() << std::endl;
-	std::cout << "\n\n";
+	// std::cout << "CURRENT MAP:" << std::endl;
+	// std::cout << StateVector.transpose() << std::endl;
+	// std::cout << "\n\n";
+
+	return UpdateMap();
 }
 
 
@@ -452,12 +588,13 @@ void EKFSlam::SetKnownLandmarks(std::vector<VectorXf> landmarks) {
 	Build_Covariance();
 }
 
-
-Eigen::Tensor<float, 2> EKFSlam::CreateMap() {
-
-	//Eigen::Tensor<float, 2> map_structure();
-	// Finish
+void EKFSlam::Set_MapDimensions(int height, int width) {
+	map_structure = Eigen::Tensor<float, 2>(height, width);
+	map_structure.setConstant(0.5);
+	map_builder.Update_2DMapDimensions(height, width);
 }
+
+
 
 
 /*

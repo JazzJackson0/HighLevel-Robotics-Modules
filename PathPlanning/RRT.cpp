@@ -47,6 +47,38 @@ bool RRT::isStartAndGoalValid() {
 }
 
 
+bool RRT::isVisible(RRT_Node node, RRT_Node nearest) {
+    
+    // Bresenham's line algorithm for line of sight checking
+    int dx = std::abs(node.x - nearest.x);
+    int dy = std::abs(node.y - nearest.y);
+    int sx = (nearest.x < node.x) ? 1 : -1;
+    int sy = (nearest.y < node.y) ? 1 : -1;
+    int err = dx - dy;
+
+    int x_curr = nearest.x;
+    int y_curr = nearest.y;
+
+    while (true) {
+		// Clear line of sight
+        if (x_curr == node.x && y_curr == node.y) { return true; }
+
+		// Line of sight blocked by obstacle
+        if (isBlocked(x_curr, y_curr) == 1.0) { return false; }
+
+        int e2 = 2 * err;
+        if (e2 > -dy) {
+            err -= dy;
+            x_curr += sx;
+        }
+        if (e2 < dx) {
+            err += dx;
+            y_curr += sy;
+        }
+    }
+}
+
+
 float RRT::Get_Distance(RRT_Node node_a, RRT_Node node_b) {
 
 	return (sqrt( pow( ( node_a.x - node_b.x ), 2 ) + 
@@ -128,30 +160,6 @@ std::pair<int, float> RRT::Get_NearestVertexIndex(RRT_Node randPos) {
     return make_pair(nearestVertexIndex, min_dist);  
 }
 
-// TODO: Does not handle vertical or horizontal lines
-bool RRT::lineIntersectsWithObstacle(RRT_Node node, RRT_Node nearest) {
-
-	float m = (float) (node.y - nearest.y) / (node.x - nearest.x);
-	float b = node.y - (node.x * m);
-	int lowest_x = nearest.x;
-	int highest_x = node.x;
-	if (node.x < lowest_x) { 
-		lowest_x = node.x; 
-		highest_x = nearest.x;
-	}
-
-	for (int x = lowest_x; x < highest_x; x++) {
-
-		int y = (int) ceil((m * x) + b);
-		if (isBlocked(x, y)) { return true; }
-
-		y = (int) floor((m * x) + b);
-		if (isBlocked(x, y)) { return true; }
-	}
-
-	return false;
-}
-
 
 bool RRT::Move_NodeCloser(RRT_Node &node, RRT_Node nearest) {
 
@@ -180,7 +188,7 @@ bool RRT::Connect_NewVertex(std::pair<int, float> nearest_info, RRT_Node new_nod
 
     // [OPTION 2] Random coordinate is <= Max Connect Distance: -----------------------------
     if (new_to_nearest <= MaxConnectionDistance) {
-		if(lineIntersectsWithObstacle(new_node, nearest)) { return false; }
+		if(!isVisible(new_node, nearest)) { return false; }
 
         // [Add new node to Graph]
 		new_node.dist_from_start = new_to_nearest + nearest.dist_from_start;
@@ -195,7 +203,7 @@ bool RRT::Connect_NewVertex(std::pair<int, float> nearest_info, RRT_Node new_nod
 
     // [OPTION 3] Random coordinate is farther than Max Connect Distance:--------------------
 	if(!Move_NodeCloser(new_node, nearest)) { return false; }
-	if(lineIntersectsWithObstacle(new_node, nearest)) { return false; }
+	if(!isVisible(new_node, nearest)) { return false; }
 
 	new_to_nearest = Get_Distance(new_node, nearest);
 
@@ -221,7 +229,7 @@ void RRT::Rewire_Neighbors(std::vector<int> neighbors, int newest_node_idx) {
 		float new_dist_from_start = new_node.dist_from_start + new_to_nearest;
 
 		// If neighbor gets a shorter path to Start by connecting to new node.
-		if (new_dist_from_start < neighbor.dist_from_start && !lineIntersectsWithObstacle(new_node, neighbor)) {
+		if (new_dist_from_start < neighbor.dist_from_start && isVisible(new_node, neighbor)) {
 			
 			// [Cancel Old Connection]
 			RapidTree.Remove_Edge(neighbor.parent_idx, neighbors[i]);
@@ -313,10 +321,10 @@ RRT::RRT(Eigen::Tensor<float, 2> map) : MAP(map) {
 	auto &d = MAP.dimensions();
 	WIDTH = d[1];
 	HEIGHT = d[0];
-	std::cout << std::endl;
-    std::cout << "Map:" << std::endl;
-    std::cout << MAP << std::endl;
-    std::cout << std::endl;
+	// std::cout << std::endl;
+    // std::cout << "Map:" << std::endl;
+    // std::cout << MAP << std::endl;
+    // std::cout << std::endl;
 }
 
 
@@ -328,10 +336,10 @@ void RRT::Load_MAP(Eigen::Tensor<float, 2> map) {
     auto &d = MAP.dimensions();
 	WIDTH = d[1];
 	HEIGHT = d[0];
-    std::cout << std::endl;
-    std::cout << "Map:" << std::endl;
-    std::cout << MAP << std::endl;
-    std::cout << std::endl;
+    // std::cout << std::endl;
+    // std::cout << "Map:" << std::endl;
+    // std::cout << MAP << std::endl;
+    // std::cout << std::endl;
 }
 
 
@@ -435,7 +443,7 @@ std::vector<VectorXi> RRT::RRTStar_Path(VectorXi start, VectorXi goal, float max
 /*
  * 			TO-DO
  * 			-----
- *  - 
+ *  - Incorporate Costmap to keep robot from hugging the edges
  *
  *  - 
  *

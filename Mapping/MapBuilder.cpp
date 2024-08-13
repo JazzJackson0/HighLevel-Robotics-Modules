@@ -49,15 +49,33 @@ void MapBuilder::Tensor2D_to_MapFile(Tensor<float, 2> tensor, std::string filena
         }
 
         // Populate Raster
-        for (int i = 0; i < M; i++) {
+        if (filetype == PBM) {
+            
+            for (int i = 0; i < M; i++) {
 
-            for (int j = 0; j < N; j++) {
+                for (int j = 0; j < N; j++) {
 
-                if (tensor(i, j) > 0.1) { map_file << "1 "; }
-                else { map_file << "0 "; }        
+                    if (tensor(i, j) > 0.1) { map_file << "1 "; }
+                    else { map_file << "0 "; }        
+                }
+                map_file << std::endl;
             }
-            map_file << std::endl;
         }
+
+        else if (filetype == PGM) {
+
+            for (int i = 0; i < M; i++) {
+
+                for (int j = 0; j < N; j++) {
+
+                    if (tensor(i, j) > 0.5) { map_file << "0 "; }
+                    else if (tensor(i, j) < 0.5) { map_file << std::to_string(max_value) + " "; }
+                    else { map_file << std::to_string(max_value / 2) + " ";; }        
+                }
+                map_file << std::endl;
+            }
+        }
+        
 
 
         map_file.close();
@@ -71,6 +89,7 @@ Tensor<float, 2> MapBuilder::MapFile_to_Tensor2D(std::string filename, int filet
     Tensor<float, 2> tensor_2d(M, N);
     tensor_2d.setZero();
     std::vector<std::string> elems;
+    int max_val = 65535;
 
     map_file.open(filename, std::ios::in);
 
@@ -103,6 +122,15 @@ Tensor<float, 2> MapBuilder::MapFile_to_Tensor2D(std::string filename, int filet
                 }
             }
 
+            // Verify MaxVal
+            if (line_num == 3 && elems.size() == 1) {
+                if (std::stoi(elems[0]) <= 0 || std::stoi(elems[0]) >= 65536) {
+                    std::cout << "Max Val is Out of Range " << std::endl;
+                    break;
+                }
+                max_val = std::stoi(elems[0]);
+            }
+
             // Enter Raster Section (Version 1)
             else if (filetype == PBM && line_num >= 3) {
 
@@ -119,8 +147,21 @@ Tensor<float, 2> MapBuilder::MapFile_to_Tensor2D(std::string filename, int filet
 
                 // Populate Tensor
                 for (int n = 0; n < elems.size(); n++) {
+                    int val = std::stoi(elems[n]);
+                    float elem = 0.5;
+                    if (val > (max_val / 2)) {
+                        elem = 0.f;
+                    }
 
-                    tensor_2d(m, n) = std::stof(elems[n]);
+                    else if (val < (max_val / 2)) {
+                        elem = 1.f;
+                    }
+
+                    else if (val == max_val / 2) {
+                        elem = 0.5;
+                    }
+
+                    tensor_2d(m, n) = elem;
                 }
                 m++;
             } 
@@ -256,4 +297,91 @@ VectorXf MapBuilder::DataStructureIndex_to_MapCoordinate(VectorXi index) {
     }
 
     return coordinate;
+}
+
+
+Eigen::Tensor<float, 2> MapBuilder::Get_MaximumLikelihoodMap(Eigen::Tensor<float, 2> map) {
+    
+    int height = map.dimension(0);
+    int width = map.dimension(1);
+
+	Eigen::Tensor<float, 2> max_likelihood(height, width);
+	max_likelihood.setConstant(0.5);
+
+	for (int m = 0; m < height; m++) {
+
+		for (int n = 0; n < width; n++) {
+
+			if (map(m, n) < 0.5) {
+				max_likelihood(m, n) = 0;
+			}
+
+			else if (map(m, n) > 0.5) {
+				max_likelihood(m, n) = 1;
+			}
+		}
+	}
+
+	return max_likelihood;
+}
+
+
+
+void MapBuilder::Apply_InflationLayer(Tensor<float, 2> &map, int inflation_radius) {
+
+    int height = map.dimension(0);
+    int width = map.dimension(1);
+    std::queue<std::pair<int, int>> bfsQueue;
+
+    // Distance Matrix: Holds each cell's distance to nearest obstacle
+    std::vector<std::vector<int>> distanceMap(height, std::vector<int>(width, std::numeric_limits<int>::max()));
+    
+    // Store all obstacle cells
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            if (map(y, x) == 1) {
+                bfsQueue.push({y, x});
+                distanceMap[y][x] = 0; // Distance to itself is 0
+            }
+        }
+    }
+    
+    // Compute minimum distances from obstacles with BFS
+    const std::vector<std::pair<int, int>> directions = {
+        {0, 1}, {1, 0}, {0, -1}, {-1, 0},  // Four cardinal directions
+        {1, 1}, {1, -1}, {-1, 1}, {-1, -1} // Four diagonals
+    };
+    
+    while (!bfsQueue.empty()) {
+        auto [y, x] = bfsQueue.front();
+        bfsQueue.pop();
+        
+        // Search Neighbors
+        for (const auto& dir : directions) {
+            int current_y = y + dir.first;
+            int current_x = x + dir.second;
+            
+            if (current_y >= 0 && current_y < height && current_x >= 0 && current_x < width) {
+                
+                // Only update distance of neighbor if shorter path (or closer distance to obstacle) is found.
+                if (distanceMap[current_y][current_x] > distanceMap[y][x] + 1) {
+                    // Shorten Neighbor's Distance
+                    distanceMap[current_y][current_x] = distanceMap[y][x] + 1;
+                    bfsQueue.push({current_y, current_x});
+                }
+            }
+        }
+    }
+    
+    // Set Costs in Costmap
+    for (int y = 0; y < height; ++y) {
+        
+        for (int x = 0; x < width; ++x) {
+            
+            if (distanceMap[y][x] <= inflation_radius) {
+                // map(y, x) = inflation_radius - distanceMap[y][x] + 1; // Example cost scaling
+                map(y, x) = 1.0;
+            }
+        }
+    }
 }

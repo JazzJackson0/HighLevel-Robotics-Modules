@@ -291,7 +291,7 @@ LineSegment FeatureExtractor::DetectSeedSegment() {
 
     // std::cout << "Num of Points: " << num_of_points << std::endl;
     // std::cout << "Min Seed Seg Num: " << MinSeedSegNum << std::endl;
-    std::cout << "Detecting Seed Segment----------------------------------------------" << std::endl;
+    // std::cout << "Detecting Seed Segment----------------------------------------------" << std::endl;
     
     LineSegment seed_seg;
     seed_seg.err = 0;
@@ -334,7 +334,7 @@ LineSegment FeatureExtractor::DetectSeedSegment() {
         }
 
         if (flag) {
-            std::cout << "Seed Seg Size (During Detection): " << seed_seg.points.size() << std::endl;
+            // std::cout << "Seed Seg Size (During Detection): " << seed_seg.points.size() << std::endl;
             return seed_seg;
         }
     }
@@ -347,7 +347,7 @@ LineSegment FeatureExtractor::DetectSeedSegment() {
 
 LineSegment FeatureExtractor::GrowSeedSegment(LineSegment seed_seg) {
 
-    std::cout << "Growing Seed Segment---------------------------------------------" << std::endl;
+    // std::cout << "Growing Seed Segment---------------------------------------------" << std::endl;
     
     int beginning_point_index = max(breakpoint_idx, seed_seg.start_idx - 1);
     int final_point_index = min(seed_seg.end_idx + 1, LaserPoints.size() - 1);
@@ -363,7 +363,7 @@ LineSegment FeatureExtractor::GrowSeedSegment(LineSegment seed_seg) {
         return error;
     }
 
-    std::cout << "Growing Right" << std::endl;
+    // std::cout << "Growing Right" << std::endl;
     // Grow Right
     while (Get_Point2LineDistance(LaserPoints[final_point_index], seed_seg.line_fit) < Epsillon) {
         // std::cout << "[RIGHT] Point-2-FitLine Dist: " << Get_Point2LineDistance(LaserPoints[final_point_index], seed_seg.line_fit) << "m   e = " << Epsillon << std::endl;
@@ -388,7 +388,7 @@ LineSegment FeatureExtractor::GrowSeedSegment(LineSegment seed_seg) {
 
     final_point_index--;
     
-    std::cout << "Growing Left" << std::endl;
+    // std::cout << "Growing Left" << std::endl;
     // Grow Left
     while (Get_Point2LineDistance(LaserPoints[beginning_point_index], seed_seg.line_fit) < Epsillon) {
         
@@ -437,13 +437,13 @@ LineSegment FeatureExtractor::GrowSeedSegment(LineSegment seed_seg) {
     if (line_seg_point_num >= MinSeedSegNum && line_seg_len >= MinLineSegLen) {
 
         breakpoint_idx = min(final_point_index + 1, LaserPoints.size());
-        std::cout << "Seed Seg Size (After Growth): " << seed_seg.points.size() << std::endl;
+        // std::cout << "Seed Seg Size (After Growth): " << seed_seg.points.size() << std::endl;
         seed_seg.endpoints = Get_Endpoints(seed_seg.line_fit, seed_seg.points[seed_seg.start_idx], seed_seg.points[seed_seg.end_idx]);
         return seed_seg;
     }
 
     error.err = 1;
-    std::cout << "About to return Error Segment (After Growth)" << std::endl;
+    // std::cout << "About to return Error Segment (After Growth)" << std::endl;
     return error;
 }
 
@@ -516,7 +516,7 @@ std::vector<Landmark> FeatureExtractor::LandmarksFromScan(PointCloud current_sca
 
     while (breakpoint_idx < (LaserPoints.size() - MinSeedSegNum)) {
 
-        std::cout << "\n";
+        // std::cout << "\n";
         
         landmark = ValidationGate(GrowSeedSegment(DetectSeedSegment()));
 
@@ -533,9 +533,9 @@ std::vector<Landmark> FeatureExtractor::LandmarksFromScan(PointCloud current_sca
             landmark.range = Get_EuclideanDistance(RobotPos, landmark.position);
             landmark.bearing = atan2(landmark.position.y, landmark.position.x) - RobotPos.angle;
 
-            std::cout << "NEW LANDMARK!!!!!!!!!!!!" << std::endl;
-            std::cout << "Position: " << landmark.position.x << ", " << landmark.position.y  << std::endl;
-            std::cout << "Line: " << landmark.line.a << "A + " << landmark.line.b << "B + " << landmark.line.c << "C" << std::endl;
+            // std::cout << "NEW LANDMARK!!!!!!!!!!!!" << std::endl;
+            // std::cout << "Position: " << landmark.position.x << ", " << landmark.position.y  << std::endl;
+            // std::cout << "Line: " << landmark.line.a << "A + " << landmark.line.b << "B + " << landmark.line.c << "C" << std::endl;
         }
     }
 

@@ -4,6 +4,7 @@
 #include <limits>
 #include <vector>
 #include </usr/include/eigen3/Eigen/Dense>
+#include "utils.hpp"
 using namespace Eigen;
 
 struct Velocities {
@@ -19,7 +20,7 @@ class DynamicWindowApproach {
 
         VectorXf Goal;
         VectorXf RobotPos;
-        std::vector<VectorXf> PointCloud;
+        std::vector<VectorXf> Cloud;
         float dist_nearing_goal;
         float smoothing;
         float heading_weight;
@@ -62,5 +63,5 @@ class DynamicWindowApproach {
 
         void Set_Goal(VectorXf goal);
 
-        VectorXf Run(VectorXf robot_pos, std::vector<VectorXf> point_cloud);
+        VectorXf Run(VectorXf robot_pos, PointCloud point_cloud);
 };

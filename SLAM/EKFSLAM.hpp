@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include <vector>
+#include <queue>
 #include <cmath>
 
 #include </usr/include/eigen3/Eigen/Dense>
@@ -9,6 +10,7 @@
 #include <cppad/cppad.hpp>
 
 #include "../FeatureExtraction/FeatureExtraction.hpp"
+#include "../Mapping/MapBuilder.hpp"
 #include "utils.hpp"
 
 using namespace CppAD;
@@ -28,6 +30,9 @@ class EKFSlam {
 
     private:
         FeatureExtractor feature_extractor;
+		MapBuilder map_builder;
+		Eigen::Tensor<float, 2> map_structure;
+		const int VIEW_RANGE = 600; // cm
 		
 		VectorXf StateVector; // The vector containing the current robot pose and all landmark positions.
 		std::vector<VectorXf> Landmarks;
@@ -64,6 +69,23 @@ class EKFSlam {
 		ADFun<float> ObservationFunction;	
 
 
+		/**
+		 * @brief Uses a BFS to propagate accross the map, marking the spaces that the robot can see as "free"
+		 * 
+		 */
+		void propagateFreeSpace();
+
+		/**
+		 * @brief Checks if a given cell is visible from the robot
+		 * 
+		 * @param x 
+		 * @param y 
+		 * @param x_robot 
+		 * @param y_robot 
+		 * @return true 
+		 * @return false 
+		 */
+		bool isVisible(int x, int y, int x_robot, int y_robot);
 
 		/**
 		 * @brief Builds the INITIAL State Vector.
@@ -218,8 +240,9 @@ class EKFSlam {
 		 * @param current_scan 
 		 * @param current_pose 
 		 * @param ctrl 
+		 * @return Eigen::Tensor<float, 2> 
 		 */
-        void Run(PointCloud current_scan, VectorXf current_pose, ControlCommand ctrl);
+        Eigen::Tensor<float, 2> Run(PointCloud current_scan, VectorXf current_pose, ControlCommand ctrl);
 
 
 		/**
@@ -229,13 +252,21 @@ class EKFSlam {
 		 */
 		void SetKnownLandmarks(std::vector<VectorXf> landmarks);
 
-
 		/**
 		 * @brief 
 		 * 
+		 * @param height 
+		 * @param width 
+		 */
+		void Set_MapDimensions(int height, int width);
+
+
+		/**
+		 * @brief Create a Map object
+		 * 
 		 * @return Eigen::Tensor<float, 2> 
 		 */
-		Eigen::Tensor<float, 2> CreateMap();
+		Eigen::Tensor<float, 2> UpdateMap();
 };
 
 

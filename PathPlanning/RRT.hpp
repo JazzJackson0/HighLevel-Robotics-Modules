@@ -94,6 +94,17 @@ class RRT {
 
 
         /**
+         * @brief 
+         * 
+         * @param node 
+         * @param nearest 
+         * @return true 
+         * @return false 
+         */
+        bool isVisible(RRT_Node node, RRT_Node nearest);
+
+
+        /**
 		 * @brief Calculate the Euclidean Distancee between two Nodes
 		 *
 		 * @param node_a Node A
@@ -145,17 +156,6 @@ class RRT {
          * @return ** pair<int, float> - (Index of the Nearest Vertex, Distance to Random Position)
          */
         std::pair<int, float> Get_NearestVertexIndex(RRT_Node randPos);
-
-
-        /**
-         * @brief 
-         * 
-         * @param node 
-         * @param nearest 
-         * @return true 
-         * @return false 
-         */
-        bool lineIntersectsWithObstacle(RRT_Node node, RRT_Node nearest);
 
 
         /**

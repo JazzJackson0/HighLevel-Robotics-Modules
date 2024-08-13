@@ -1,4 +1,4 @@
-#include "AStar.hpp"
+#include "Star.hpp"
 
 float A_Star::Get_ManhattanDistance(int x1, int y1, int x2, int y2) {
 
@@ -40,7 +40,7 @@ bool A_Star::isBlocked(int x, int y) {
 
     int row = y;
     int col = x;
-    return MAP(row, col) != 0.f;
+    return MAP(row, col) > 0.5f;
 }
 
 
@@ -299,10 +299,10 @@ A_Star::A_Star(Eigen::Tensor<float, 2> map) : MAP(map) {
     auto &d = MAP.dimensions();
 	WIDTH = d[1];
 	HEIGHT = d[0];
-    std::cout << std::endl;
-    std::cout << "Map:" << std::endl;
-    std::cout << MAP << std::endl;
-    std::cout << std::endl;
+    // std::cout << std::endl;
+    // std::cout << "Map:" << std::endl;
+    // std::cout << MAP << std::endl;
+    // std::cout << std::endl;
 }
 
 
@@ -313,10 +313,10 @@ void A_Star::Load_MAP(Eigen::Tensor<float, 2> map) {
     auto &d = MAP.dimensions();
 	WIDTH = d[1];
 	HEIGHT = d[0];
-    std::cout << std::endl;
-    std::cout << "Map:" << std::endl;
-    std::cout << MAP << std::endl;
-    std::cout << std::endl;
+    // std::cout << std::endl;
+    // std::cout << "Map:" << std::endl;
+    // std::cout << MAP << std::endl;
+    // std::cout << std::endl;
 }
 
 
@@ -327,7 +327,7 @@ std::vector<VectorXi> A_Star::Path(VectorXi startCell, VectorXi goalCell) {
     Goal = goalCell;
     if (!isStartAndGoalValid()) { 
         ThePath.push_back(startCell);
-        std::cout << "Invalid Coordinates for START or GOAL." << std::endl;
+        std::cout << "Invalid Coordinates for START (" << startCell.transpose() << ") or GOAL (" << goalCell.transpose() << ")" << std::endl;
         return ThePath; 
     }
 
@@ -378,11 +378,11 @@ std::vector<VectorXi> A_Star::Path(VectorXi startCell, VectorXi goalCell) {
                 PathTrace(MapOfCells);
                 
                 // Tests
-                std::cout << std::endl;
-                std::cout << "Path:" << std::endl;
-                for (int i = 0; i < ThePath.size(); i++) {
-                    std::cout << ThePath[i].transpose() << std::endl;
-                }
+                // std::cout << std::endl;
+                // std::cout << "Path:" << std::endl;
+                // for (int i = 0; i < ThePath.size(); i++) {
+                //     std::cout << ThePath[i].transpose() << std::endl;
+                // }
 
                 return ThePath;
             }
@@ -423,7 +423,7 @@ std::vector<VectorXi> A_Star::Path(VectorXi startCell, VectorXi goalCell) {
 /*
  * 			TO-DO
  * 			-----
- *  - 
+ *  - Incorporate Costmap to keep robot from hugging the edges
  *
  *  - 
  *  

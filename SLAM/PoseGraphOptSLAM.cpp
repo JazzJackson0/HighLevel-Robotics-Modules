@@ -1,5 +1,142 @@
 #include "PoseGraphOptSLAM.hpp"
 
+void PoseGraphOptSLAM::propagateFreeSpace() {
+
+	int width = map_structure.dimension(1);
+	int height = map_structure.dimension(0);
+	VectorXi robot_index = map_builder.MapCoordinate_to_DataStructureIndex(PreviousPose.pose);
+    int x_robot = robot_index[0];
+    int y_robot = robot_index[1];
+
+    // Direction vectors for 8-connected neighbors
+    int directions[8][2] = { {1, 0}, {0, 1}, {-1, 0}, {0, -1}, 
+                             {1, 1}, {1, -1}, {-1, 1}, {-1, -1} };
+
+    std::queue<VectorXi> q;
+    q.push(robot_index);
+
+    while (!q.empty()) {
+        VectorXi index = q.front();
+		int x = index[0];
+		int y = index[1];
+        q.pop();
+
+        // Check all 8-connected neighbors
+        for (auto& dir : directions) {
+            int nx = x + dir[0];
+            int ny = y + dir[1];
+
+            // Check bounds
+            if (nx < 0 || nx >= width || ny < 0 || ny >= height) {
+                continue;
+            }
+
+            // Check if within the robot's view range
+            if (std::sqrt(std::pow(nx - x_robot, 2) + std::pow(ny - y_robot, 2)) < VIEW_RANGE) {
+
+                if (map_structure(ny, nx) == 0.5 && isVisible(nx, ny, x_robot, y_robot)) {
+                    map_structure(ny, nx) = 0.0;
+					VectorXi new_index(2);
+					new_index << nx, ny;
+                    q.push(new_index);
+                }
+            }
+        }
+    }
+}
+
+bool PoseGraphOptSLAM::isVisible(int x, int y, int x_robot, int y_robot) {
+    
+	if (map_structure(y, x) == 1.0) { return false;	}
+
+    // Bresenham's line algorithm for line of sight checking
+    int dx = std::abs(x - x_robot);
+    int dy = std::abs(y - y_robot);
+    int sx = (x_robot < x) ? 1 : -1;
+    int sy = (y_robot < y) ? 1 : -1;
+    int err = dx - dy;
+
+    int x_curr = x_robot;
+    int y_curr = y_robot;
+
+    while (true) {
+		// Clear line of sight
+        if (x_curr == x && y_curr == y) { return true; }
+
+		// Line of sight blocked by obstacle
+        if (map_structure(y_curr, x_curr) == 1.0) { return false; }
+
+        int e2 = 2 * err;
+        if (e2 > -dy) {
+            err -= dy;
+            x_curr += sx;
+        }
+        if (e2 < dx) {
+            err += dx;
+            y_curr += sy;
+        }
+    }
+}
+
+
+// Test this!!
+Eigen::Tensor<float, 2> PoseGraphOptSLAM::UpdateMap() {
+
+	VectorXi robot_index = map_builder.MapCoordinate_to_DataStructureIndex(PreviousPose.pose);
+	int width = map_structure.dimension(1);
+	int height = map_structure.dimension(0);
+	
+	Pose_Graph.iterator_start();
+	while (Pose_Graph.iterator_hasNext()) {
+
+		Pose pose = Pose_Graph.iterator_get_data();
+
+		for (int i = 0; i < pose.Landmarks.points.size(); i++) {
+			
+			VectorXf point = pose.Landmarks.points[i];
+			VectorXi beam_index = map_builder.MapCoordinate_to_DataStructureIndex(point);
+
+			if ((beam_index[0] >= 0 && beam_index[0] < width) && (beam_index[1] >= 0 && beam_index[1] < height)) {
+				map_structure(beam_index[1], beam_index[0]) = 1.f;
+
+				// Estimate Free Space: Bresenham's line algorithm for ray-casting
+				int dx = std::abs(beam_index[0] - robot_index[0]);
+				int dy = std::abs(beam_index[1] - robot_index[1]);
+				int sx = (robot_index[0] < beam_index[0]) ? 1 : -1;
+				int sy = (robot_index[1] < beam_index[1]) ? 1 : -1;
+				int err = dx - dy;
+
+				int x = robot_index[0];
+				int y = robot_index[1];
+
+				while (true) {
+
+					if (map_structure(y, x) == 0.5) { map_structure(y, x) = 0.0; }
+
+					if (map_structure(y, x) == 1.0) { break; }
+
+					// Stop once end of line is reached
+					if (x == beam_index[0] && y == beam_index[1]) { break; }
+
+					// Climb the slope between robot and beam point
+					int e2 = 2 * err;
+					if (e2 > -dy) {
+						err -= dy;
+						x += sx;
+					}
+					if (e2 < dx) {
+						err += dx;
+						y += sy;
+					}
+				}
+			}
+		}
+		Pose_Graph.iterator_next();
+	}
+	propagateFreeSpace();
+	return map_structure;
+}
+
 float PoseGraphOptSLAM::Calculate_Overlap(PointCloud landmarks_a, PointCloud landmarks_b) {
 
 	float mean_ax = 0.0;
@@ -350,6 +487,7 @@ bool PoseGraphOptSLAM::FrontEnd(PointCloud current_landmarks) {
 
 void PoseGraphOptSLAM::Optimize() {
 	
+	std::cout << "Optimizing" << std::endl;
 	UpdateStateVector();
 	VectorXf StateVectorIncrement;
 	StateVectorIncrement = VectorXf::Ones(CurrentPoses_n * PoseDimensions);
@@ -370,7 +508,7 @@ void PoseGraphOptSLAM::Optimize() {
 			int edge_index_i = Pose_Graph.Get_EdgeEnds(n).first;
 			int edge_index_j = Pose_Graph.Get_EdgeEnds(n).second;
 
-			std::cout << "Edge i Index: " << edge_index_i << " Edge j Index: " << edge_index_j << " Graph Size: " << Pose_Graph.Get_NumOfVertices() << "\n";
+			// std::cout << "Edge i Index: " << edge_index_i << " Edge j Index: " << edge_index_j << " Graph Size: " << Pose_Graph.Get_NumOfVertices() << "\n";
 
 			VectorXf pose_i = Pose_Graph.Get_Vertex(edge_index_i).pose;	
 			VectorXf pose_j = Pose_Graph.Get_Vertex(edge_index_j).pose;
@@ -453,6 +591,7 @@ PoseGraphOptSLAM::PoseGraphOptSLAM(int max_nodes, int pose_dimension, int guess_
 	max_iterations = 100;
 	StateVector = VectorXf::Zero(0); // (Assuming a pose dimension of 3 [x, y, theta])
 	icp = ICP(2, 3);
+	MapBuilder map_builder();
 
 	std::vector<AD<float>> xs(PoseDimensions * 2);
 	std::vector<AD<float>> ys(PoseDimensions); 
@@ -469,23 +608,29 @@ void PoseGraphOptSLAM::FrontEndInit(int n_recent_poses, float closure_distance) 
 
 
 
-void PoseGraphOptSLAM::Run(PointCloud current_landmarks, VectorXf &currentPose) {
+Eigen::Tensor<float, 2> PoseGraphOptSLAM::Run(PointCloud current_landmarks, VectorXf &currentPose) {
 	
-	if (FrontEnd(current_landmarks))
+	if (FrontEnd(current_landmarks)) {
 		Optimize();
+		std::cout << "Uhh... Sending MAP" << std::endl;
+		return UpdateMap();
+	}
+		
 	
 	for (int i = 0; i < currentPose.rows(); i++) {
 		currentPose[i] = PreviousPose.pose[i];
 	}
-	
+}
+
+void PoseGraphOptSLAM::Set_MapDimensions(int height, int width) {
+	map_structure = Eigen::Tensor<float, 2>(height, width);
+	map_structure.setConstant(0.5);
+	map_builder.Update_2DMapDimensions(height, width);
 }
 
 
-Eigen::Tensor<float, 2> PoseGraphOptSLAM::CreateMap() {
 
-	//Eigen::Tensor<float, 2> map_structure();
-	// Finish
-}
+
 
 
 /*

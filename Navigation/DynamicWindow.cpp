@@ -1,7 +1,5 @@
 #include "DynamicWindow.hpp"
 
-// NOT FINISHED!!!!!!!!!!!
-
 // Private---------------------------------------------------------------------------------------------------------------------------------
 
 VectorXf DynamicWindowApproach::Get_ClosestObstacle() {
@@ -9,15 +7,15 @@ VectorXf DynamicWindowApproach::Get_ClosestObstacle() {
     float closest_dist = std::numeric_limits<float>::max();
     float closest_idx = 0;
 
-    for (int i = 0; i < PointCloud.size(); i++) {
+    for (int i = 0; i < Cloud.size(); i++) {
 
-        float dist = std::sqrt(std::pow((RobotPos[0] - PointCloud[i][0]), 2) + std::pow((RobotPos[1] - PointCloud[i][1]), 2));
+        float dist = std::sqrt(std::pow((RobotPos[0] - Cloud[i][0]), 2) + std::pow((RobotPos[1] - Cloud[i][1]), 2));
         if (dist < closest_dist) {
             closest_idx = i;
         }
     }
 
-    return PointCloud[closest_idx];
+    return Cloud[closest_idx];
 }
 
 float DynamicWindowApproach::heading(float trans_vel, float rot_vel) {
@@ -45,12 +43,10 @@ float DynamicWindowApproach::velocity(float trans_vel, float rot_vel) {
     float v_norm = std::sqrt(std::pow(trans_vel, 2) + std::pow(rot_vel, 2)); // I have no idea if this is correct. Needs research
 
     if (dist > dist_nearing_goal) {
-        (v_norm) / MaxVel;
+        return v_norm / MaxVel;
     }
 
-    else {
-        return 1 - ((v_norm) / MaxVel);
-    }
+    return 1 - (v_norm / MaxVel);
 }
 
 float DynamicWindowApproach::ObjectiveFunction(float trans_vel, float rot_vel) {
@@ -136,10 +132,18 @@ VectorXf DynamicWindowApproach::Optimize(std::vector<Velocities> vels) {
     }
 
     VectorXf best_vel(2);
-    best_vel << vels[lowest_cost_idx].trans_vel, vels[lowest_cost_idx].rot_vel;
-    PreviousVel.trans_vel = best_vel[0];
-    PreviousVel.rot_vel = best_vel[1];
 
+    if (vels.size() == 0) {
+        std::cout << "No permissible velocities available" << std::endl;
+        best_vel << 0, 0;
+    }
+    
+    else {
+        best_vel << vels[lowest_cost_idx].trans_vel, vels[lowest_cost_idx].rot_vel;
+        PreviousVel.trans_vel = best_vel[0];
+        PreviousVel.rot_vel = best_vel[1];
+    }
+    
     return best_vel;
 }
 
@@ -169,9 +173,9 @@ void DynamicWindowApproach::Set_Goal(VectorXf goal) {
     Goal = goal;
 }
 
-VectorXf DynamicWindowApproach::Run(VectorXf robot_pos, std::vector<VectorXf> point_cloud) {
+VectorXf DynamicWindowApproach::Run(VectorXf robot_pos, PointCloud point_cloud) {
 
     RobotPos = robot_pos;
-    PointCloud = point_cloud;
+    Cloud = point_cloud.points;
     return Optimize(SearchSpace());
 }

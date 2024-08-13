@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <bits/c++config.h>
 #include <cmath>
+#include <limits>
 
 #include <cppad/cppad.hpp>
 #include <cppad/utility/sparse2eigen.hpp>
@@ -21,7 +22,9 @@
 
 #include "../DataStructures/Graph.hpp"
 #include "../ScanMatching/ICP.hpp"
+#include "../Mapping/MapBuilder.hpp"
 #include "utils.hpp"
+
 
 using namespace CppAD;
 using namespace Eigen;
@@ -61,29 +64,52 @@ struct HbResults {
 
 class PoseGraphOptSLAM {
 
-	int MaxPoses_n;
-	int CurrentPoses_n;
-	int PoseDimensions;     
-	bool InitialScan;
-	VectorXf StateVector;
-	std::vector<VectorXf> rotation_axes; // Used for converting from State Vector back to Transformation matrices
-	Pose PreviousPose;
-	std::vector<AD<float>> X; // x_j, x_i, y_j, y_i, theta_j, theta_i
-	std::vector<AD<float>> Y;
-	ADFun<float> ErrorFunction;
-	int VariationAroundGuess;
-	float min_convergence_thresh;
-	Graph<Pose, PoseEdge> Pose_Graph;
-	int max_iterations;
-
-	// Used in Front End
-	int NRecentPoses; 
-	float ClosureDistance;
-	PointCloud PreviousLandmarks;
-	float OverlapTolerance;
-	ICP icp;
 	
 	private:
+
+		int MaxPoses_n;
+		int CurrentPoses_n;
+		int PoseDimensions;     
+		bool InitialScan;
+		VectorXf StateVector;
+		std::vector<VectorXf> rotation_axes; // Used for converting from State Vector back to Transformation matrices
+		Pose PreviousPose;
+		std::vector<AD<float>> X; // x_j, x_i, y_j, y_i, theta_j, theta_i
+		std::vector<AD<float>> Y;
+		ADFun<float> ErrorFunction;
+		int VariationAroundGuess;
+		float min_convergence_thresh;
+		Graph<Pose, PoseEdge> Pose_Graph;
+		int max_iterations;
+
+		// Used in Front End
+		int NRecentPoses; 
+		float ClosureDistance;
+		PointCloud PreviousLandmarks;
+		float OverlapTolerance;
+		ICP icp;
+		MapBuilder map_builder;
+		Eigen::Tensor<float, 2> map_structure;
+		const int VIEW_RANGE = 600; // cm
+	
+
+		/**
+		 * @brief Uses a BFS to propagate accross the map, marking the spaces that the robot can see as "free"
+		 * 
+		 */
+		void propagateFreeSpace();
+
+		/**
+		 * @brief Checks if a given cell is visible from the robot
+		 * 
+		 * @param x 
+		 * @param y 
+		 * @param x_robot 
+		 * @param y_robot 
+		 * @return true 
+		 * @return false 
+		 */
+		bool isVisible(int x, int y, int x_robot, int y_robot);
 
 		/**
 		 * @brief Takes 2 point clouds and determines the amount of overlap between them.
@@ -235,9 +261,18 @@ class PoseGraphOptSLAM {
          * @brief Run the Pose Graph Optimization SLAM Algorithm for 1 iteration.
          * 
          * @param current_landmarks 
-		 * @param currentPose 
+         * @param currentPose 
+         * @return Eigen::Tensor<float, 2> 
          */
-        void Run(PointCloud current_landmarks, VectorXf &currentPose);
+        Eigen::Tensor<float, 2> Run(PointCloud current_landmarks, VectorXf &currentPose);
+
+		/**
+		 * @brief 
+		 * 
+		 * @param height 
+		 * @param width 
+		 */
+		void Set_MapDimensions(int height, int width);
 
 
 		/**
@@ -245,7 +280,7 @@ class PoseGraphOptSLAM {
 		 * 
 		 * @return Eigen::Tensor<float, 2> 
 		 */
-		Eigen::Tensor<float, 2> CreateMap();
+		Eigen::Tensor<float, 2> UpdateMap();
 };
 
 

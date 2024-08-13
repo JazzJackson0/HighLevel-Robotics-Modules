@@ -40,9 +40,21 @@ class PID {
 
     public:
 
+        /**
+         * @brief Construct a new PID object
+         * 
+         */
         PID();
 
-
+        /**
+         * @brief Construct a new PID object
+         * 
+         * @param direction 
+         * @param sample_time_ms 
+         * @param kp 
+         * @param ki 
+         * @param kd 
+         */
         PID(int direction, float sample_time_ms, float kp, float ki, float kd);
 
         /**

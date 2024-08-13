@@ -35,6 +35,7 @@ class RRTTest : public ::testing::Test {
 				k += cols;	
 			}
 			rrt = new RRT(grid);
+			std::cout << "Note: Paths are output with cartesian coordinates (x, y) rather than [row, col] indexes" << std::endl;
 		}
 			
 		~RRTTest() {

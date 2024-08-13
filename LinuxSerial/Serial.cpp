@@ -1,10 +1,7 @@
 #include "Serial.hpp"
 
-// TODO: Need to test
-
-
 Serial::Serial() {
-    buffer_size = 100;
+    buffer_size = 255;
 }
 
 
@@ -15,14 +12,18 @@ void Serial::Set_BufferSize(int buff_size) {
 
 int8_t Serial::PinInit(uint8_t gpioNum, int pinDirection) {
 
-    char path[buffer_size];
     FILE *file;
 
-    snprintf(path, sizeof(path), GPIO_PATH"/gpio%d/direction", gpioNum);
-    file = fopen(path, "w");
+    // char path[buffer_size];
+    // snprintf(path, sizeof(path), GPIO_PATH"/gpio%d/direction", gpioNum);
+
+    std::string path = "/gpio" + std::to_string(gpioNum) + "/direction";
+    const char *raw_path = path.c_str();
+
+    file = fopen(raw_path, "w");
 
     if (file == ((void*)0)) {
-        std::cerr << "Unable to open file. Cannot initialize pin " << gpioNum << std::endl;
+        std::cerr << "Unable to open file. Cannot initialize pin " << std::to_string(gpioNum) << std::endl;
         return -1;
     }
 
@@ -35,16 +36,18 @@ int8_t Serial::PinInit(uint8_t gpioNum, int pinDirection) {
 
 
 int8_t Serial::UARTInit(uint8_t uartNum) {
-
-    char path[buffer_size];
+  
     struct termios settings; // Serial settings
     int uart;
 
-    snprintf(path, sizeof(path), "/dev/serial.%d", uartNum);
+    // char path[buffer_size];
+    // snprintf(path, sizeof(path), "/dev/serial.%d", uartNum);
+
+    std::string path = "/dev/serial." + std::to_string(uartNum);
+    const char *raw_path = path.c_str();
     
-    if(uart = open(path, O_RDWR | O_NDELAY, O_NOCTTY) < 0) {
-        std::cerr << "Unable to open file. Cannot initialize serial/uart " << uartNum << std::endl;
-        close(uart);
+    if(uart = open(raw_path, O_RDWR | O_NDELAY, O_NOCTTY) < 0) {
+        std::cerr << "Unable to open file. Cannot initialize serial/uart-" << std::to_string(uartNum) << std::endl;
         return -1;
     }
 	
@@ -65,17 +68,22 @@ int8_t Serial::UARTInit(uint8_t uartNum) {
     return uart;
 }
 
+void UARTDeInit(uint8_t uartNum) {
+
+    close(uartNum);
+}
+
 
 int8_t Serial::I2CInit(uint8_t i2cNum, uint8_t slaveAddress) {
 
-    char path[buffer_size];
-    int8_t i2c_bus;
+    // char path[20];
+    // snprintf(path, sizeof(path), "/dev/i2c-%d", i2cNum);
+    std::string path = "/dev/i2c-" + std::to_string(i2cNum);
+    const char *raw_path = path.c_str();
+    int8_t i2c_bus = open(raw_path, O_RDWR);
 
-    snprintf(path, sizeof(path), "/dev/i2c-%d", i2cNum);
-    
-    if(i2c_bus = open(path, O_RDWR) < 0) {
-        std::cerr << "Unable to open file. Cannot initialize i2c " << i2cNum << std::endl;
-        close(i2c_bus);
+    if(i2c_bus < 0) {
+        std::cerr << "Unable to open file. Cannot initialize i2c-" << std::to_string(i2cNum) << std::endl;
         return -1;
     }
 	
@@ -89,18 +97,26 @@ int8_t Serial::I2CInit(uint8_t i2cNum, uint8_t slaveAddress) {
     return i2c_bus;
 }
 
+void I2CDeInit(uint8_t i2cNum) {
 
+    close(i2cNum);
+}
 
-int8_t Serial::SPIInit(uint8_t spiNum, uint8_t mode, uint32_t speed_hz, uint8_t bits) {
+int8_t Serial::SPIInit(uint8_t spiNum, uint8_t spi_mode, uint32_t speed_hz, uint8_t spi_bits) {
 
-    char path[buffer_size];
+    mode = spi_mode;
+    speed = speed_hz;
+    bits = spi_bits;
     int spi_bus;
 
-    snprintf(path, sizeof(path), "/dev/spidev0.%d", spiNum);
+    // char path[buffer_size];
+    // snprintf(path, sizeof(path), "/dev/spidev0.%d", spiNum);
+
+    std::string path = "/dev/spidev0." + std::to_string(spiNum);
+    const char *raw_path = path.c_str();
     
-    if(spi_bus = open(path, O_RDWR) < 0) {
-        std::cerr << "Unable to open file. Cannot initialize spi " <<spiNum << std::endl;
-        close(spi_bus);
+    if(spi_bus = open(raw_path, O_RDWR) < 0) {
+        std::cerr << "Unable to open file. Cannot initialize spi-" << std::to_string(spiNum) << std::endl;
         return -1;
     }
 	
@@ -127,16 +143,25 @@ int8_t Serial::SPIInit(uint8_t spiNum, uint8_t mode, uint32_t speed_hz, uint8_t 
 }
 
 
+void SPIDeInit(uint8_t spiNum) {
+
+    close(spiNum);
+}
+
+
 int8_t Serial::PinWrite(uint8_t gpioNum, uint8_t pinState) {
 
-    char path[buffer_size];
     FILE *file;
 
-    snprintf(path, sizeof(path), GPIO_PATH"/gpio%d/value", gpioNum);
-    file = fopen(path, "w");
+    // char path[buffer_size];
+    // snprintf(path, sizeof(path), GPIO_PATH"/gpio%d/value", gpioNum);
+
+    std::string path = "/gpio" + std::to_string(gpioNum) + "/value";
+    const char *raw_path = path.c_str();
+    file = fopen(raw_path, "w");
 
     if (file == ((void*)0)) {
-        std::cerr << "Unable to open file. Cannot set state of pin " << gpioNum << std::endl;
+        std::cerr << "Unable to open file. Cannot set state of pin " << std::to_string(gpioNum) << std::endl;
         return -1;
     }
 
@@ -150,16 +175,18 @@ int8_t Serial::PinWrite(uint8_t gpioNum, uint8_t pinState) {
 
 
 int8_t Serial::PinRead(uint8_t gpioNum) {
-
-    char path[buffer_size];
+    
     FILE *file;
     char* pinState;
 
-    snprintf(path, sizeof(path), GPIO_PATH"/gpio%d/value", gpioNum);
-    file = fopen(path, "r");
+    // char path[buffer_size];
+    // snprintf(path, sizeof(path), GPIO_PATH"/gpio%d/value", gpioNum);
+    std::string path = "/gpio" + std::to_string(gpioNum) + "/value";
+    const char *raw_path = path.c_str();
+    file = fopen(raw_path, "r");
 
     if (file == ((void*)0)) {
-        std::cerr << "Unable to open file. Cannot determine state of pin " << gpioNum << std::endl;
+        std::cerr << "Unable to open file. Cannot determine state of pin " << std::to_string(gpioNum) << std::endl;
         return -1;
     }
 
@@ -191,7 +218,7 @@ int8_t Serial::UARTRead(int uart, char* data, int datalen) {
 }
 
 
-int8_t Serial::I2CWrite(int &i2c_bus, int8_t *dataBytes, int byteNum) {
+int8_t Serial::I2CWrite(int8_t &i2c_bus, int8_t *dataBytes, int byteNum) {
     
     if(write(i2c_bus, dataBytes, byteNum) != byteNum){
         std::cerr << "Failed to write" << std::endl;
@@ -201,7 +228,7 @@ int8_t Serial::I2CWrite(int &i2c_bus, int8_t *dataBytes, int byteNum) {
 }
 
 
-int8_t Serial::I2CRead(int &i2c_bus, int8_t *dataBytes, int byteNum) {
+int8_t Serial::I2CRead(int8_t &i2c_bus, int8_t *dataBytes, int byteNum) {
 
     if (read(i2c_bus, dataBytes, byteNum) != byteNum) {
         std::cerr << "Failed to read" << std::endl;
