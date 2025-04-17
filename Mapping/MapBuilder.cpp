@@ -2,7 +2,10 @@
 
 
 
-MapBuilder::MapBuilder() { /*Default Constructor*/ }
+MapBuilder::MapBuilder() { 
+    
+    P = -1;
+}
 
 MapBuilder::MapBuilder(int m, int n) : M(m), N(n) {
     P = -1;
@@ -15,6 +18,7 @@ void MapBuilder::Update_2DMapDimensions(int m, int n) {
 
     M = m;
     N = n;
+    P = -1;
 }
 
 
@@ -25,28 +29,25 @@ void MapBuilder::Update_3DMapDimensions(int m, int n, int p) {
     P = p;
 }
 
-
-
 void MapBuilder::Tensor2D_to_MapFile(Tensor<float, 2> tensor, std::string filename, int filetype, int max_value) {
 
-    map_file.open(filename, std::ios::out | std::ios::trunc);
+    // map_file.open(filename, std::ios::out | std::ios::trunc);
+    map_file.open(filename, std::ios::out | std::ios::binary); // truncation is implicit here
     
     if (map_file.is_open()) {
 
-        if (filetype == PBM) { map_file << "P4" << std::endl; }
+        if (filetype == PBM) map_file << "P4" << std::endl;
 
-        else if (filetype == PGM) { map_file << "P5" << std::endl; }
+        else if (filetype == PGM) map_file << "P5" << std::endl;
 
-        else if (filetype == PPM) { map_file << "P6" << std::endl; }
+        else if (filetype == PPM) map_file << "P6" << std::endl;
 
         // Set Dimensions
         map_file << std::to_string(M) << " " << std::to_string(N) << std::endl;
 
         // Set Max Value
-        if (filetype == PGM || filetype == PPM) {
-
+        if (filetype == PGM || filetype == PPM)
             map_file << std::to_string(max_value) << std::endl;
-        }
 
         // Populate Raster
         if (filetype == PBM) {
@@ -55,8 +56,8 @@ void MapBuilder::Tensor2D_to_MapFile(Tensor<float, 2> tensor, std::string filena
 
                 for (int j = 0; j < N; j++) {
 
-                    if (tensor(i, j) > 0.1) { map_file << "1 "; }
-                    else { map_file << "0 "; }        
+                    if (tensor(i, j) > 0.1) map_file << "1 ";
+                    else map_file << "0 ";   
                 }
                 map_file << std::endl;
             }
@@ -68,16 +69,37 @@ void MapBuilder::Tensor2D_to_MapFile(Tensor<float, 2> tensor, std::string filena
 
                 for (int j = 0; j < N; j++) {
 
-                    if (tensor(i, j) > 0.5) { map_file << "0 "; }
-                    else if (tensor(i, j) < 0.5) { map_file << std::to_string(max_value) + " "; }
-                    else { map_file << std::to_string(max_value / 2) + " ";; }        
+                    // ASCI Raster Format (P2)
+                    // if (tensor(i, j) > 0.5) { map_file << "0 "; }
+                    // else if (tensor(i, j) < 0.5) { map_file << std::to_string(max_value) + " "; }
+                    // else { map_file << std::to_string(max_value / 2) + " "; }
+
+                    // Binary Raster Format    
+                    if (max_value <= 256) { // 8-Bit Data
+                        uint8_t pixel = static_cast<uint8_t>(max_value / 2);  
+                        if (tensor(i, j) > 0.5)
+                            pixel = static_cast<uint8_t>(0); 
+
+                        else if (tensor(i, j) < 0.5)
+                            pixel = static_cast<uint8_t>(max_value); 
+
+                        map_file.write(reinterpret_cast<char*>(&pixel), sizeof(pixel));
+                    }
+
+                    else { // 16-Bit Data
+                        uint16_t pixel = static_cast<uint16_t>(max_value / 2);  
+                        if (tensor(i, j) > 0.5)
+                            pixel = static_cast<uint16_t>(0); 
+
+                        else if (tensor(i, j) < 0.5)
+                            pixel = static_cast<uint16_t>(max_value); 
+  
+                        map_file.write(reinterpret_cast<char*>(&pixel), sizeof(pixel));
+                    }
                 }
-                map_file << std::endl;
+                // map_file << std::endl; // Not necessary for binary format
             }
         }
-        
-
-
         map_file.close();
     }
     
@@ -116,8 +138,8 @@ Tensor<float, 2> MapBuilder::MapFile_to_Tensor2D(std::string filename, int filet
             // Verify Width & Height
             if (line_num == 2 && elems.size() == 2) {
                 if (std::stoi(elems[0]) != N || std::stoi(elems[1]) != M) {
-                    std::cout << "Map File and Tensor Dimensions Do Not Match. [Map File--> Width: " << elems[0] 
-                        << ", Height: " << elems[1] << "] [Tensor--> Width: " << N << ", " << M << "]" << std::endl;
+                    std::cerr << "ERROR: Map File and Tensor Dimensions Do Not Match. [Map File--> Width: " << elems[0] 
+                        << ", Height: " << elems[1] << "] [Tensor--> Width: " << N << ", " << M << "]\n";
                     break;
                 }
             }
@@ -125,7 +147,7 @@ Tensor<float, 2> MapBuilder::MapFile_to_Tensor2D(std::string filename, int filet
             // Verify MaxVal
             if (line_num == 3 && elems.size() == 1) {
                 if (std::stoi(elems[0]) <= 0 || std::stoi(elems[0]) >= 65536) {
-                    std::cout << "Max Val is Out of Range " << std::endl;
+                    std::cerr << "ERROR: Max Val is Out of Range \n";
                     break;
                 }
                 max_val = std::stoi(elems[0]);
@@ -135,10 +157,8 @@ Tensor<float, 2> MapBuilder::MapFile_to_Tensor2D(std::string filename, int filet
             else if (filetype == PBM && line_num >= 3) {
 
                 // Populate Tensor
-                for (int n = 0; n < elems.size(); n++) {
-
+                for (int n = 0; n < elems.size(); n++)
                     tensor_2d(m, n) = std::stof(elems[n]);
-                }
                 m++;
             }
 
@@ -149,17 +169,14 @@ Tensor<float, 2> MapBuilder::MapFile_to_Tensor2D(std::string filename, int filet
                 for (int n = 0; n < elems.size(); n++) {
                     int val = std::stoi(elems[n]);
                     float elem = 0.5;
-                    if (val > (max_val / 2)) {
+                    if (val > (max_val / 2))
                         elem = 0.f;
-                    }
 
-                    else if (val < (max_val / 2)) {
+                    else if (val < (max_val / 2))
                         elem = 1.f;
-                    }
 
-                    else if (val == max_val / 2) {
+                    else if (val == max_val / 2)
                         elem = 0.5;
-                    }
 
                     tensor_2d(m, n) = elem;
                 }
@@ -170,7 +187,7 @@ Tensor<float, 2> MapBuilder::MapFile_to_Tensor2D(std::string filename, int filet
         map_file.close();
 
     }
-    else  { std::cout << "Error opening file" << std::endl; }
+    else std::cerr << "ERROR: Error opening file\n";
 
     // Test
     // std::cout << tensor_2d << std::endl;
@@ -181,7 +198,7 @@ Tensor<float, 2> MapBuilder::MapFile_to_Tensor2D(std::string filename, int filet
 
 void MapBuilder::Tensor3D_to_MapFile(Tensor<float, 3> tensor, std::string filename, int filetype) {
 
-    if (P <= 0) { return; }
+    if (P <= 0) return;
 
     map_file.open(filename, std::ios::out | std::ios::trunc);
    
@@ -216,7 +233,7 @@ Tensor<float, 3> MapBuilder::MapFile_to_Tensor3D(std::string filename, int filet
     // Use PLY Library (7-Libraries/PLY-Polygon-File-Format/)
     Tensor<float, 3> tensor_3d(P, M, N);
     tensor_3d.setZero();
-    if (P <= 0) { return tensor_3d; }
+    if (P <= 0) return tensor_3d;
 
     std::vector<std::string> elems;
     map_file.open(filename, std::ios::in);
@@ -243,21 +260,18 @@ Tensor<float, 3> MapBuilder::MapFile_to_Tensor3D(std::string filename, int filet
             // Verify Map Data fits Tensor Dimensions
             if (in_header && elems.size() == 3) {
 
-                if (elems[1].compare("vertex") == 0 && std::stoi(elems[2]) != (N*M*P)) {
-                    std::cout << "Map File and Tensor Dimensions Do Not Match" << std::endl;
-                }
+                if (elems[1].compare("vertex") == 0 && std::stoi(elems[2]) != (N*M*P))
+                    std::cout << "ERROR: Map File and Tensor Dimensions Do Not Match\n";
             }
 
             // Not in Header and still have points to add to tensor
-            else if (!in_header && points_added < (N*M*P)) {
-
+            else if (!in_header && points_added < (N*M*P))
                 // Populate Tensor
                 tensor_3d(std::stoi(elems[2]), std::stoi(elems[1]), std::stoi(elems[0])) = 1.f;
-            }
         }
         map_file.close();
     }
-    else  { std::cout << "Error opening file" << std::endl; }
+    else std::cout << "ERROR: Error opening file\n";
 
     // Test
     // std::cout << tensor_3d << std::endl;
@@ -268,16 +282,20 @@ Tensor<float, 3> MapBuilder::MapFile_to_Tensor3D(std::string filename, int filet
 
 VectorXi MapBuilder::MapCoordinate_to_DataStructureIndex(VectorXf coordinate) {
 
+    
     VectorXi index = VectorXi::Zero(2);
-    if (P <= 0) {index.resize(3);}
+    if (P > 0) {index.resize(3);}
+
+    if (coordinate[0] >= (N / 2)) coordinate[0] = (N / 2) - 1;
+    else if (coordinate[0] < -(N / 2)) coordinate[0] = -(N / 2);
+    if (coordinate[1] >= (M / 2)) coordinate[1] = (M / 2) - 1;
+    else if (coordinate[1] < -(M / 2)) coordinate[1] = -(M / 2);
 
     index[0] = (int) round(coordinate[0] + (N / 2));
     index[1] = (int) round(coordinate[1] + (M / 2));
 
-    if (coordinate.rows() == 3) {
-
+    if (coordinate.rows() == 3 && P > 0)
         index[2] = (int) round(coordinate[2] + (P / 2));
-    }
     
     return index;
 }
@@ -286,15 +304,13 @@ VectorXi MapBuilder::MapCoordinate_to_DataStructureIndex(VectorXf coordinate) {
 VectorXf MapBuilder::DataStructureIndex_to_MapCoordinate(VectorXi index) {
 
     VectorXf coordinate = VectorXf::Zero(2);
-    if (P <= 0) {coordinate.resize(3);}
+    if (P > 0) coordinate.resize(3);
 
     coordinate[0] =  (float) (index[0] + (N / 2));
     coordinate[1] = (float) (index[1] + (M / 2));
 
-    if (index.rows() == 3) {
-
+    if (index.rows() == 3)
         coordinate[2] = (float) (index[2] + (P / 2));
-    }
 
     return coordinate;
 }
@@ -312,13 +328,11 @@ Eigen::Tensor<float, 2> MapBuilder::Get_MaximumLikelihoodMap(Eigen::Tensor<float
 
 		for (int n = 0; n < width; n++) {
 
-			if (map(m, n) < 0.5) {
+			if (map(m, n) < 0.5)
 				max_likelihood(m, n) = 0;
-			}
 
-			else if (map(m, n) > 0.5) {
+			else if (map(m, n) > 0.5)
 				max_likelihood(m, n) = 1;
-			}
 		}
 	}
 
@@ -378,10 +392,9 @@ void MapBuilder::Apply_InflationLayer(Tensor<float, 2> &map, int inflation_radiu
         
         for (int x = 0; x < width; ++x) {
             
-            if (distanceMap[y][x] <= inflation_radius) {
+            if (distanceMap[y][x] <= inflation_radius)
                 // map(y, x) = inflation_radius - distanceMap[y][x] + 1; // Example cost scaling
                 map(y, x) = 1.0;
-            }
         }
     }
 }

@@ -1,24 +1,53 @@
 #pragma once
 #include <iostream>
 #include <vector>
-#include </usr/include/eigen3/Eigen/Dense>
-
+#include <Eigen/Dense>
+#include <queue>
 using std::vector;
 using namespace::Eigen;
+struct Packet {
+    VectorXf data{0};
+    float weight;
+};
 
 struct Node {
-    VectorXf data;
-    int pos;
-    struct Node *left;
-    struct Node *right;
+    Packet packet;
+    Node *left;
+    Node *right;
 };
 
 
 class KDTree {
 
     private:
-        struct Node *kd_tree;
+        Node *kd_tree;
         int k;
+        // std::vector<Packet> raw_points;
+
+        /**
+         * @brief Get the Depth object
+         * 
+         * @param node 
+         * @return int 
+         */
+        int getDepth(Node* node);
+        
+        /**
+         * @brief 
+         * 
+         * @param node 
+         * @param points 
+         */
+        void collectPoints(Node* node, std::vector<VectorXf> &points);
+        
+        /**
+         * @brief 
+         * 
+         * @param points 
+         * @param depth 
+         * @return Node* 
+         */
+        Node* buildBalancedTree(std::vector<VectorXf> &points, int depth);
 
         /**
          * @brief Retruns the squared distance between two points
@@ -30,14 +59,22 @@ class KDTree {
         float get_radius_squared(VectorXf point_a, VectorXf point_b);
 
         /**
-         * @brief 
+         * @brief Determine which node (node a or node b) is closest to the given point
          * 
          * @param point 
-         * @param current_node 
-         * @param temp 
-         * @return struct Node* 
+         * @param node_a 
+         * @param node_b 
+         * @return Node* 
          */
-        struct Node * get_closest(VectorXf point, Node *current_node, Node *temp);
+        Node * get_closest(VectorXf point, Node *node_a, Node *node_b);
+
+        /**
+         * @brief 
+         * 
+         * @param current_node 
+         * @return Node* 
+         */
+        Node* findMin(Node *current_node);
 
         /**
          * @brief 
@@ -49,9 +86,50 @@ class KDTree {
          */
         bool point_match(VectorXf point_a, VectorXf point_b);
 
+        /**
+         * @brief Insert new node into the KD Tree
+         * 
+         * @param point 
+         * @param current_node 
+         * @param depth 
+         * @return Node* 
+         */
+        Node* insert(VectorXf point, Node *current_node, int depth);
+
+        /**
+         * @brief 
+         * 
+         * @param point 
+         * @param current_node 
+         * @param depth 
+         * @return Node* Root of the modified tree
+         */
+        Node* remove(VectorXf point, Node *current_node, int depth);
+
+        /**
+         * @brief 
+         * 
+         * @param point 
+         * @param current_node 
+         * @param depth 
+         * @return Node* 
+         */
+        Node* search(VectorXf point, Node *current_node, int depth);
+
+        /**
+         * @brief 
+         * 
+         * @param point 
+         * @param current_node 
+         * @param depth 
+         * @return Node* 
+         */
+        Node* get_nearest_neighbor(VectorXf point, Node *current_node, int depth);
+
         
 
     public:
+        std::vector<Packet> raw_points;
 
         /**
          * @brief Construct a new KDTree object
@@ -69,56 +147,53 @@ class KDTree {
         /**
          * @brief 
          * 
-         * @param points 
-         * @return struct Node* 
+         * @return Node* 
          */
-        struct Node* build_tree(std::vector<VectorXf> points);
-
-        /**
-         * @brief insert new node into the KD Tree
-         * 
-         * @param point 
-         * @param pos 
-         * @param current_node 
-         * @param depth 
-         */
-        void insert(VectorXf point, int pos, struct Node *current_node, int depth);
+        Node* GetKDTree();
 
         /**
          * @brief 
          * 
          * @param point 
-         * @param current_node 
-         * @param depth 
-         * @return struct Node* Root of the modified tree
          */
-        struct Node* remove(VectorXf point, struct Node *current_node, int depth);
-
+        void Insert(VectorXf point);
+        
         /**
          * @brief 
          * 
-         * @param current_node 
-         * @return struct Node* 
+         * @param point 
          */
-        struct Node* find_min(struct Node *current_node);
+        void Remove(VectorXf point);
+        
+        /**
+         * @brief 
+         * 
+         * @param point 
+         * @return VectorXf 
+         */
+        Packet Search(VectorXf point);
 
         /**
          * @brief 
          * 
          * @param point 
-         * @param current_node 
-         * @param depth 
-         * @return struct Node* 
+         * @return VectorXf 
          */
-        struct Node* search(VectorXf point, struct Node *current_node, int depth);
+        Packet NearestNeighbor(VectorXf point);
+
 
         /**
          * @brief 
          * 
          * @param point 
-         * @param current_node 
-         * @param depth 
-         * @return struct Node* 
          */
-        struct Node* get_nearest_neighbor(VectorXf point, struct Node *current_node, int depth);
+        void AddData(VectorXf point, float weight);
+
+        
+        /**
+         * @brief 
+         * 
+         */
+        void buildKDTree(); 
+
 };

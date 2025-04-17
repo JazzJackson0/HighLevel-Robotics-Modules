@@ -1,20 +1,16 @@
 #pragma once
 #include <iostream>
+#include <unordered_map>
 #include <string>
 #include <cstring>
 #include <cstdio>
 #include <unistd.h>
 #include <fcntl.h>
-#include <termios.h> // Functions for serial interface config
+#include <termios.h>
 #include <sys/ioctl.h>
 #include <linux/spi/spidev.h>
 #include <linux/i2c.h>
 #include <linux/i2c-dev.h>
-
-// i2cget -y [i2cnum, e.g. 3] CHIP-ADDDRESS DATA-ADDRESS
-// i2cget -y 3 0x40 05 (0x40 + 5 = 0x45)
-
-//i2cset -y 3 0x40 255 ...
 
 // Linux handles all of the single bit operations for you, Start/Stop, R/W, Ack/Nack
 
@@ -22,7 +18,6 @@
 #define PIN_OUT 1
 #define PIN_LOW 0
 #define PIN_HIGH 1
-#define GPIO_PATH "/sys/class/gpio"
 
 class Serial {
 
@@ -33,6 +28,13 @@ class Serial {
         uint8_t mode;
         uint32_t speed;
         uint8_t bits; 
+
+        static std::unordered_map<int, struct termios> default_terminal_settings;
+
+        // File Descriptors
+        static std::unordered_map<int, int> uart_buses;
+        std::unordered_map<int, int> i2c_buses;
+        std::unordered_map<int, int> spi_buses;
 
     public:
 
@@ -54,7 +56,7 @@ class Serial {
          * @brief Initialize the given pin and set its direction.
          * 
          * @param gpioNum 
-         * @param pinDirection Direction of Pin (IN or OUT)
+         * @param pinDirection Direction of Pin (PIN_IN or PIN_OUT)
          * @return ** int8_t - Returns 1 is successful, -1 if error occured.
          */
         int8_t PinInit(uint8_t gpioNum, int pinDirection);
@@ -69,9 +71,15 @@ class Serial {
         int8_t UARTInit(uint8_t uartNum);
 
         /**
+         * @brief Restore terminal settings when the program ends
+         * 
+         */
+        static void RestoreTerminal();
+
+        /**
          * @brief 
          * 
-         * @param uartNum 
+         * @param uartNum
          */
         void UARTDeInit(uint8_t uartNum);
 
@@ -89,7 +97,7 @@ class Serial {
         /**
          * @brief 
          * 
-         * @param i2cNum 
+         * @param i2cNum
          */
         void I2CDeInit(uint8_t i2cNum);
 
@@ -108,7 +116,8 @@ class Serial {
         /**
          * @brief 
          * 
-         * @param spiNum 
+         * @param spiNum
+         * 
          */
         void SPIDeInit(uint8_t spiNum);
 
@@ -117,7 +126,7 @@ class Serial {
          * @brief Set the state of a given pin.
          * 
          * @param gpioNum 
-         * @param pinState State of Pin (HIGH or LOW)
+         * @param pinState State of Pin (PIN_HIGH or PIN_LOW)
          * @return ** int8_t - Returns 1 is successful, -1 if error occured.
          */
         int8_t PinWrite(uint8_t gpioNum, uint8_t pinState);
@@ -134,56 +143,86 @@ class Serial {
         /**
          * @brief 
          * 
-         * @param uart 
+         * @param uartNum
          * @param data 
          * @param datalen 
          * @return int8_t 
          */
-        int8_t UARTWrite(int uart, char* data, int datalen);
+        int8_t UARTWrite(uint8_t uartNum, char* data, int datalen);
 
 
         /**
          * @brief 
          * 
-         * @param uart 
+         * @param uartNum
          * @param data 
          * @param datalen 
          * @return int8_t 
          */
-        int8_t UARTRead(int uart, char* data, int datalen);
+        int8_t UARTRead(uint8_t uartNum, char* data, int datalen);
 
 
         /**
          * @brief Write data to I2C bus
          * 
-         * @param i2c_bus I2C Bus device file
+         * @param i2cNum 
          * @param dataBytes Data to write
          * @param byteNum Number of bytes to write
          * @return int 
          */
-        int8_t I2CWrite(int8_t &i2c_bus, int8_t *dataBytes, int byteNum);
+        int8_t I2CWrite(uint8_t i2cNum, uint8_t *dataBytes, int byteNum);
 
 
         /**
          * @brief Read data from I2C bus
          * 
-         * @param i2c_bus I2C Bus device file
+         * @param i2cNum 
          * @param dataBytes Buffer to write data to
          * @param byteNum Number of bytes to read
          * @return int 
          */
-        int8_t I2CRead(int8_t &i2c_bus, int8_t *dataBytes, int byteNum);
+        int8_t I2CRead(uint8_t i2cNum, uint8_t *dataBytes, int byteNum);
 
 
         /**
          * @brief Makes SPI transfer
          * 
-         * @param spi_bus SPI Bus device file descriptor
+         * @param spiNum 
          * @param dataBytes Buffer to write data to. When data is Received, this buffer will be overwritten.
          * @param len Length of data buffer
          * 
          * @return int
          */
-        int SPITransfer(int8_t spi_bus, int8_t *dataBytes, int len);
+        int SPITransfer(uint8_t spiNum, int8_t *dataBytes, int len);
+
+        /**
+         * @brief 
+         * 
+         * @param chipNum 
+         * @param pwmNum 
+         * @param period 
+         * @param duty_cycle 
+         * @return int 
+         */
+        int PWMInit(uint8_t chipNum, uint8_t pwmNum, uint64_t period, uint64_t duty_cycle);
+
+        /**
+         * @brief 
+         * 
+         * @param chipNum 
+         * @param pwmNum 
+         * @return int 
+         */
+        int PWMDeInit(uint8_t chipNum, uint8_t pwmNum);
+
+        /**
+         * @brief 
+         * 
+         * @param chipNum 
+         * @param pwmNum 
+         * @param duty_cycle 
+         * @return int 
+         */
+        int PWMUpdate(uint8_t chipNum, uint8_t pwmNum, uint64_t duty_cycle);
 
 };

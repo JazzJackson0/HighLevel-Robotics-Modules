@@ -4,13 +4,13 @@
 #include <cmath>
 #include <utility>
 #include <limits>
+#include <numeric>
 
-#include </usr/include/eigen3/Eigen/Dense>
-#include </usr/include/eigen3/Eigen/SVD>
-#include </usr/include/eigen3/Eigen/QR>
+#include <Eigen/Dense>
+#include <Eigen/SVD>
+#include <Eigen/QR>
 
 #include <cppad/cppad.hpp>
-#include "../Algos/kd_tree.hpp"
 #include "utils.hpp"
 
 using std::vector;
@@ -31,7 +31,6 @@ class ICP {
 		std::vector<AD<float>> Y;
 		ADFun<float> ErrorFunction;
 		float min_convergence_thresh;	
-		KDTree kd_tree;
 
 		/**
 		 * @brief Calculate the root mean squared error between point sets.

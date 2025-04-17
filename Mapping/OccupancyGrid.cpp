@@ -1,7 +1,7 @@
 #include "OccupancyGrid.hpp"
 
 // Private-------------------------------------------------------------------------------------------------------------------------------------
-float OccupancyGridMap::LogOdds(float x) {
+inline float OccupancyGridMap::LogOdds(float x) {
 
 	return (float) log( x / (1 - x) ); 
 }
@@ -9,55 +9,47 @@ float OccupancyGridMap::LogOdds(float x) {
 
 float OccupancyGridMap::InverseSensorModel(ogrid::Cell cell, std::vector<VectorXf> beams) {
 
-	float cell_range = sqrt(pow((cell.x - Pose[0]), 2) + pow((cell.y - Pose[1]), 2));
-	float cell_bearing = atan2( (cell.y - Pose[1]), (cell.x - Pose[0]) ) - Pose[2];
-	int k = Get_MostSimilarBeam(beams, cell_range, cell_bearing);
+	float cell_range = hypot((cell.x - Pose[0]), (cell.y - Pose[1]));
+	float cell_bearing = atan2( (cell.y - Pose[1]), (cell.x - Pose[0]) ) - PoseAngle;
+	
+	int k = Get_MostSimilarBeam(beams, cell, cell_range, cell_bearing);
 
-	if (k < 0) { return LogOdds(0.0); }
+	if (k < 0) return LogOdds(0.0);
 
 	//std::cout << "k: " << k << std::endl;
 	
 	// Determine Range of Beam k
 	float beam_range;
-	if (beams[k][0] + (Alpha / 2) > MaxRange) { beam_range = MaxRange; }
-	else { beam_range = beams[k][0] + (Alpha / 2); }
+	if (beams[k][0] + (Alpha / 2) > MaxRange) beam_range = MaxRange; 
+	else beam_range = beams[k][0] + (Alpha / 2); 
 
 	// IF Cell is farther than Beam range [OR] Cell is out of the scanner's field of view
-	if (cell_range > beam_range || abs(cell_bearing - beams[k][1]) > (Beta / 2)) {
-		// Don't know whether occupied or not.
-		return LogOdds(0.5);
-	}
+	if (cell_range > beam_range || abs(cell_bearing - beams[k][1]) > (Beta / 2))
+		return LogOdds(0.5); // Don't know whether occupied or not.
 
 	// IF Cell is closer than Beam range
-	else if (cell_range <= beams[k][0]) {
-		// Most likely NOT occupied
-		return LogOdds(0.3);
-	}
+	else if (cell_range <= beams[k][0])
+		return LogOdds(0.3); // Most likely NOT occupied
 
 	// IF Cell range is about the same as beam range
-	else if (beams[k][0] < MaxRange && abs(cell_range - MaxRange) < (Alpha / 2)) {
-		// Most likely occupied
-		return LogOdds(0.7);
-	}
+	else if (beams[k][0] < MaxRange && abs(cell_range - MaxRange) < (Alpha / 2))
+		return LogOdds(0.7); // Most likely occupied
 
 	return LogOdds(0.0);
 }
 
 
-int OccupancyGridMap::Get_MostSimilarBeam(std::vector<VectorXf> scan, float range, float bearing) {
-	
+int OccupancyGridMap::Get_MostSimilarBeam(std::vector<VectorXf> beams, ogrid::Cell cell, float cell_range, float cell_bearing) {
+
 	float min_heading = std::numeric_limits<float>::max();
 	int index = -1;
-	for (int i = 0; i < scan.size(); i++) {
+	for (int i = 0; i < beams.size(); i++) {
 
 		float heading = 0.f;
-		float range_diff = abs(scan[i][0] - range);
-		float angle_diff = abs(scan[i][1] - bearing);
-		heading += range_diff;
-		heading += angle_diff;
+		heading += abs(beams[i][0] - cell_range); // Range Difference
+		heading += abs(beams[i][1] - cell_bearing); // Angle Difference
 
 		if (heading < min_heading) { 
-			
 			min_heading = heading;
 			index = i;
 		}
@@ -73,26 +65,23 @@ OccupancyGridMap::OccupancyGridMap() { /** Default Constructor */ }
 OccupancyGridMap::OccupancyGridMap(int m, int n, float alpha, float beta, float max_range) : 
 	M(m), N(n), Alpha(alpha), Beta(beta), MaxRange(max_range) {
 	
-	Eigen::Tensor<float, 2> i(M, N);
-	Eigen::Tensor<float, 2> p(M, N);
 	Eigen::Tensor<float, 2> g(M, N);
-	i.setZero();
-	p.setZero();
 	g.setZero();
-	InitialGridMap = i;
-	PreviousGridMap = p;
 	GridMap = g;
 	map_builder = MapBuilder(M, N);
+	PoseAngle = 0;
 }
 
 
 
 Eigen::Tensor<float, 2> OccupancyGridMap::UpdateGridMap(VectorXf pose, std::vector<VectorXf> scan) {
 
-	std::cout << "Number of Points Scanned: " << scan.size() << std::endl;
+	// auto start = std::chrono::high_resolution_clock::now();
 
-	Pose = map_builder.MapCoordinate_to_DataStructureIndex(pose);
+	Pose = map_builder.MapCoordinate_to_DataStructureIndex(pose.head<2>());
+	PoseAngle = pose[2];
 	
+	#pragma omp parallel for collapse(2)
 	for (int i = 0; i < M; i++) {
 		
 		for (int j = 0; j < N; j++) {
@@ -100,16 +89,13 @@ Eigen::Tensor<float, 2> OccupancyGridMap::UpdateGridMap(VectorXf pose, std::vect
 			ogrid::Cell cell;
 			cell.x = i;
 			cell.y = j;
-			GridMap(i, j) = InverseSensorModel(cell, scan);
-
-			GridMap = GridMap + PreviousGridMap - InitialGridMap;
-			PreviousGridMap = GridMap;
+			GridMap(i, j) += InverseSensorModel(cell, scan);
 		}
-
-		std::cout << "Map Row " << i + 1 << "/" << M << " Completed" << std::endl;
 	}
 
-	std::cout << "Map Made!!!!" << std::endl;
+	// auto end = std::chrono::high_resolution_clock::now();
+	// std::cout << "Map Made!!!!" << "\n";
+	// std::cout << "Map Build Time: " << std::chrono::duration_cast<std::chrono::seconds>(end - start).count() << " sec" << std::endl;
 
 	return GridMap;
 }
@@ -120,7 +106,7 @@ Eigen::Tensor<float, 2> OccupancyGridMap::UpdateGridMapWithPointCloud(PointCloud
 	for (int i = 0; i < cloud.points.size(); i++) {
 
 		VectorXf pt(2);
-		pt << (cloud.points[i][0] * 100), (cloud.points[i][1] * 100); // m --> cm
+		pt << (cloud.points[i][0]), (cloud.points[i][1]);
 
 		VectorXi index = map_builder.MapCoordinate_to_DataStructureIndex(pt);
 		

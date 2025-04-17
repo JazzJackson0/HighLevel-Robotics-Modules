@@ -3,8 +3,8 @@
 #include <queue>
 #include <vector>
 #include <limits>
-#include </usr/include/eigen3/Eigen/Dense>
-#include "/usr/include/eigen3/unsupported/Eigen/CXX11/Tensor"
+#include <Eigen/Dense>
+#include "unsupported/Eigen/CXX11/Tensor"
 
 using namespace Eigen;
 
@@ -25,11 +25,11 @@ struct PointStatus {
     PointStatus(MapStatus m_status, FrontierStatus f_status) : map_status(m_status), frontier_status(f_status) {}
 };
 
-struct RecursionPoint {
-    bool added;
-    RecursionPoint() {}
-    RecursionPoint(bool _added) : added(_added) {}
-};
+// struct RecursionPoint {
+//     bool added;
+//     RecursionPoint() {}
+//     RecursionPoint(bool _added) : added(_added) {}
+// };
 
 
 class FrontierExplorer {
@@ -52,12 +52,12 @@ class FrontierExplorer {
          */
         void Build_CellStatusMap();
 
-        /**
-         * @brief 
-         * 
-         * @param RecursionMap 
-         */
-        void Build_RecursionMap(RecursionPoint **&RecursionMap);
+        // /**
+        //  * @brief 
+        //  * 
+        //  * @param RecursionMap 
+        //  */
+        // void Build_RecursionMap(RecursionPoint **&RecursionMap);
 
         /**
          * @brief 
@@ -81,19 +81,28 @@ class FrontierExplorer {
         /**
          * @brief 
          * 
+         * @param point 
+         * @return true 
+         * @return false 
+         */
+        bool Has_OpenSpaceNeighbor(VectorXi point);
+
+        /**
+         * @brief 
+         * 
          * @param frontier 
          * @return VectorXi 
          */
         VectorXi Get_Centroid(std::vector<VectorXi> frontier);
 
-        /**
-         * @brief 
-         * 
-         * @param point 
-         * @param adjacents 
-         * @param RecursionMap 
-         */
-        void Get_AdjacentCells(VectorXi point, std::vector<VectorXi> &adjacents, RecursionPoint **RecursionMap);
+        // /**
+        //  * @brief 
+        //  * 
+        //  * @param point 
+        //  * @param adjacents 
+        //  * @param RecursionMap 
+        //  */
+        // void Get_AdjacentCells(VectorXi point, std::vector<VectorXi> &adjacents, RecursionPoint **RecursionMap);
 
         /**
          * @brief 
@@ -113,15 +122,7 @@ class FrontierExplorer {
          */
         void Update_CellStatus(VectorXi point, int map_frontier, int status);
 
-        /**
-         * @brief 
-         * 
-         * @param point 
-         * @return true 
-         * @return false 
-         */
-        bool Has_OpenSpaceNeighbor(VectorXi point);
-
+        
         /**
          * @brief 
          * 
@@ -130,6 +131,7 @@ class FrontierExplorer {
          */
         std::vector<std::vector<VectorXi>> Detect_WavefrontFrontier(VectorXi robot_index);
 
+        
         /**
          * @brief 
          * 

@@ -1,9 +1,12 @@
 #pragma once
 #include <iostream>
 #include <cmath>
-#include </usr/include/eigen3/Eigen/Dense>
+#include <Eigen/Dense>
 #include "../LinuxSerial/Serial.hpp"
 using namespace Eigen;
+
+#define I2C_NUM 1
+#define I2C_SLAVE_ADDRS 0x55
 
 class Odom {
 
@@ -28,6 +31,8 @@ class Odom {
         VectorXf Get_NewPosition();
 
         VectorXf Get_NewVelocities();
+
+        VectorXf Get_NewRawVelocities();
 };
 
 

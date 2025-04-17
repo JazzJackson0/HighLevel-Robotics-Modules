@@ -6,8 +6,8 @@
 #include <queue>
 #include <cfloat>
 #include <vector>
-#include </usr/include/eigen3/Eigen/Dense>
-#include "/usr/include/eigen3/unsupported/Eigen/CXX11/Tensor"
+#include <Eigen/Dense>
+#include "unsupported/Eigen/CXX11/Tensor"
 using std::pair;
 using std::stack;
 using std::make_pair;
@@ -155,17 +155,6 @@ class A_Star {
          */
         float Get_GCost(int x1, int y1, int x2, int y2, DistanceFormula formula);
 
-        
-        /**
-         * @brief Out of a list of all possible cells to visit next, 
-         *      this function calculated the one with the lowest overall cost.
-         *      It just so happens to do it in a terribly inefficient way
-         * 
-         * @param uncovered 
-         * @return astar::Cell 
-         */
-        astar::Cell AReallyShitty_LowestCostNodeFunction(std::vector<astar::Cell> &uncovered);
-
 
         /**
          * @brief 
@@ -185,20 +174,8 @@ class A_Star {
          * 
          * @return ** Cell** 
          */
-        astar::Cell** Init_MatrixOfCells();
+        std::vector<std::vector<astar::Cell>> Init_MatrixOfCells();
 
-        /**
-         * @brief Initialize a boolean matrix representation of the Grid 
-         *          with every element set to false.
-         *          This will keep track of all visited cells, with those visited
-         *          being set to true.
-         * 
-         *          Holds all the cells whose details have been uncovered during the A* Process
-         *          Meaning: Every "Visited" cell along with their 8 peripheral "Viewed" cells.
-         * 
-         * @return ** bool** 
-         */
-        bool** Init_BooleanMatrix();
 
         /**
          * @brief Traces the discovered path from Goal cell back to Start Cell,
@@ -207,7 +184,7 @@ class A_Star {
          * @param cells Holds 2D array of the Uncovered and Visited Cells.
          * @return ** void 
          */
-        void PathTrace(astar::Cell **cells);
+        void PathTrace(std::vector<std::vector<astar::Cell>> cells);
 
  
     public:

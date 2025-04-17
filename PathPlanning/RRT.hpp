@@ -7,9 +7,9 @@
 #include <vector>
 #include <list>
 #include <stack>
-#include </usr/include/eigen3/Eigen/Dense>
-#include "/usr/include/eigen3/unsupported/Eigen/CXX11/Tensor"
-#include "../DataStructures/Graph.hpp"
+#include <Eigen/Dense>
+#include "unsupported/Eigen/CXX11/Tensor"
+#include "Graph.hpp"
 using std::make_pair;
 using namespace Eigen;
 
@@ -22,6 +22,10 @@ struct RRT_Node {
     RRT_Node(int _x, int _y) : x(_x), y(_y) {}
     bool operator == (RRT_Node otherNode) {
         return (this->x == otherNode.x && this->y == otherNode.y);
+    }
+    void setPoint(int x, int y) {
+        this->x = x;
+        this->y = y;
     }
 };
 
@@ -124,38 +128,25 @@ class RRT {
 
 
         /**
-         * @brief Produce a vector of all nodes within a given radius of the random node.
+         * @brief Produce a vector of all nodes within a given radius of the node.
 		 *
-		 * @param search_radius The radius around the given node in which to search for nodes.
-		 * @param randPos The random node at the center of the search radius.
+		 * @param nodes The node at the center of the search radius.
+         * @param search_radius The radius around the given node in which to search for nodes.
          * @param neighbors
          * @return true 
          * @return false 
          */
-		bool Get_Neighbors(float search_radius, RRT_Node randPos, std::vector<int> &neighbors); 
-
-		/**
-		 * @brief Searches through the list of vertices for the vertex with the best cost
-         *          (i.e. the smallest distance back to the start position).
-		 *
-		 * @param neighbors List of vertices within the search radius of a random node.
-         * @param randPos The random node at the center of the search radius.
-		 *
-		 * @return ** pair<int, float> - (Index of neighbor with best Cost, Distance between that node 
-         *                                  and the random position)
-		 */
-    	std::pair<int, float> Get_BestNeighbor(std::vector<int> neighbors, RRT_Node randPos);
+		bool Get_Neighbors(RRT_Node node, float search_radius, std::vector<int> &neighbors); 
 
 
         /**
-         * @brief Find the Vertex in the Tree that is nearest to the given Random (x,y)
-         *          coordinates.
+         * @brief Find the Vertex in the Tree that is nearest to the given node.
          * 
-         * @param randPos Random Position
+         * @param randPos node
 		 *
-         * @return ** pair<int, float> - (Index of the Nearest Vertex, Distance to Random Position)
+         * @return ** pair<int, float> - (Index of the Nearest Vertex, Distance to node)
          */
-        std::pair<int, float> Get_NearestVertexIndex(RRT_Node randPos);
+        std::pair<int, float> Get_NearestVertexIndex(RRT_Node node);
 
 
         /**

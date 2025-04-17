@@ -2,7 +2,7 @@
 
 float ParticleFilter::Get_Range(VectorXf p1, VectorXf p2) {
 
-	return sqrt(((p2[0] - p1[0])*(p2[0] - p1[0])) + ((p2[1] - p1[1])*(p2[1] - p1[1])));
+	return hypot((p2[0] - p1[0]), (p2[1] - p1[1]));
 }
 
 float ParticleFilter::Get_Bearing(VectorXf p1, VectorXf p2) {
@@ -22,30 +22,31 @@ float ParticleFilter::Get_RandomBetween(float lowVal, float highVal) {
 float ParticleFilter::ProbabilityDensityFunction(float x, Distribution distribution) {
 	
 	return (1 / (distribution.std_dev * std::sqrt(2 * M_PI)) * 
-		std::exp(-0.5 * std::pow( (x - distribution.mean / distribution.std_dev), 2) ));
+		std::exp(-0.5 * ((x - distribution.mean / distribution.std_dev) * (x - distribution.mean / distribution.std_dev)) ));
 }
 
 
-PointCloud ParticleFilter::Get_FeaturePoints(Particle particle) {
+PointCloud ParticleFilter::Get_FeaturePointsInRange(Particle particle) {
 
 	PointCloud points_in_range;
+	int left_bound = ((int)(particle.pose[0] - MaxBeamDist)) < 0? 0 : ((int)(particle.pose[0] - MaxBeamDist));
+	int right_bound = ((int)(particle.pose[0] + MaxBeamDist)) > MapWidth? MapWidth : ((int)(particle.pose[0] + MaxBeamDist));
+	int lower_bound = ((int)(particle.pose[1] - MaxBeamDist)) < 0? 0 : ((int)(particle.pose[0] - MaxBeamDist));
+	int upper_bound = ((int)(particle.pose[1] + MaxBeamDist)) > MapHeight? MapHeight : ((int)(particle.pose[1] + MaxBeamDist));
+	float half = 1.f / 2;
 	// Pseudo Scan: Check a given distance and width around the particle for feature point coordinates
-	for (int x = 0; x < MapWidth; x++) {
+	for (int x = left_bound; x < right_bound; x++) {
 
-		for (int y = 0; y < MapHeight; y++) {
+		for (int y = lower_bound; y < upper_bound; y++) {
 
 			int cell = Map(x, y);
 			if (cell > 0.0) {
 				
 				VectorXf map_feature(2);
 				map_feature << (float) x, (float) y;
-				float range = Get_Range(map_feature, particle.pose);
 				float bearing = Get_Bearing(map_feature, particle.pose);
 
-				if (range > MaxBeamDist)
-					continue;
-
-				if (bearing > particle.pose[2] + (AngularBeamWidth / 2) || bearing < particle.pose[2] - (AngularBeamWidth / 2))
+				if (bearing > particle.pose[2] + (AngularBeamWidth * half) || bearing < particle.pose[2] - (AngularBeamWidth * half))
 					continue;
 
 				points_in_range.points.push_back(map_feature);
@@ -64,12 +65,23 @@ Particle ParticleFilter::Move_Particle(int particle_idx, ControlCommand odom) {
 	updated_particle.pose = VectorXf::Zero(PoseDimensions);
 	float trans = odom.trans_vel;
 	float rot = odom.rot_vel;
+	float vel_quotient = trans / rot;
+
+	if (odom.rot_vel == 0) {
+		updated_particle.pose[0] = ParticleSet[particle_idx].pose[0] + trans * cos(ParticleSet[particle_idx].pose[2]) * TimeInterval;
+		
+		updated_particle.pose[1] = ParticleSet[particle_idx].pose[0] + trans * sin(ParticleSet[particle_idx].pose[2]) * TimeInterval;
+		
+		updated_particle.pose[2] = 0;
+
+		return updated_particle;
+	}
 	
-	updated_particle.pose[0] = (ParticleSet[particle_idx].pose[0] + (-1*(trans / rot)) * sin(ParticleSet[particle_idx].pose[2]) 
-		+ (-1*(trans / rot)) * sin(ParticleSet[particle_idx].pose[2] + rot * TimeInterval) );
+	updated_particle.pose[0] = (ParticleSet[particle_idx].pose[0] + (-1*(vel_quotient)) * sin(ParticleSet[particle_idx].pose[2]) 
+		+ (-1*(vel_quotient)) * sin(ParticleSet[particle_idx].pose[2] + rot * TimeInterval) );
 	
-	updated_particle.pose[1] = (ParticleSet[particle_idx].pose[0] + (-1*(trans / rot)) * cos(ParticleSet[particle_idx].pose[2]) 
-		+ (-1*(trans / rot)) * cos(ParticleSet[particle_idx].pose[2] + rot * TimeInterval) );
+	updated_particle.pose[1] = (ParticleSet[particle_idx].pose[0] + (-1*(vel_quotient)) * cos(ParticleSet[particle_idx].pose[2]) 
+		+ (-1*(vel_quotient)) * cos(ParticleSet[particle_idx].pose[2] + rot * TimeInterval) );
 	
 	updated_particle.pose[2] = (ParticleSet[particle_idx].pose[0] + rot * TimeInterval);
 
@@ -77,10 +89,10 @@ Particle ParticleFilter::Move_Particle(int particle_idx, ControlCommand odom) {
 }
 
 
-void ParticleFilter::Generate_Weight(PointCloud robot_pointcloud, Particle &particle) {
+void ParticleFilter::Generate_ParticleWeight(PointCloud robot_pointcloud, Particle &particle) {
 
 	std::vector<Particle> ParticleSetUpdate;
-	PointCloud simulated_pointcloud = Get_FeaturePoints(particle); // All occupied cells in range of particle
+	PointCloud simulated_pointcloud = Get_FeaturePointsInRange(particle); // All occupied cells in range of particle
 
 	// std::cout << "Size of Point Cloud in Range: " << simulated_pointcloud.points.size() << std::endl;
 	// std::cout << "Particle: (" << particle.pose[0] << ", " << particle.pose[1] << ") Angle: " << particle.pose[2] << std::endl;
@@ -99,11 +111,10 @@ void ParticleFilter::Generate_Weight(PointCloud robot_pointcloud, Particle &part
 		for (int r = 0; r < robot_pointcloud.points.size(); r++) { 
 			
 			// Range Weight
-			float robot_point_range = Get_Range(particle.pose, robot_pointcloud.points[r] * 100); // m --> cm
+			float real_point_range = Get_Range(particle.pose, robot_pointcloud.points[r] * 100); // m --> cm
 			float simulated_point_range = Get_Range(particle.pose, simulated_pointcloud.points[p]);
-			Distribution normal_distro1 = Distribution(robot_point_range, range_sigma);
-			float range_weight = ProbabilityDensityFunction(simulated_point_range, normal_distro1);
-
+			Distribution range_normal_distro = Distribution(real_point_range, range_sigma);
+			float range_weight = ProbabilityDensityFunction(simulated_point_range, range_normal_distro);
 			//std::cout << "Range Weight: " << (float) range_weight << std::endl;
 			
 			// Normalize to 1
@@ -111,18 +122,16 @@ void ParticleFilter::Generate_Weight(PointCloud robot_pointcloud, Particle &part
 			range_weight *= range_coef;
 
 			// Bearing Weight
-			float robot_point_bearing = Get_Bearing(particle.pose, robot_pointcloud.points[r] * 100); // m --> cm
+			float real_point_bearing = Get_Bearing(particle.pose, robot_pointcloud.points[r] * 100); // m --> cm
 			float simulated_point_bearing = Get_Bearing(particle.pose, simulated_pointcloud.points[p]);
 			// Distribution normal_distro2 = Distribution(robot_point_bearing, bearing_sigma);
 			// std::cout << "Robot Point Bearing: " << (float) robot_point_bearing << std::endl;
 			// std::cout << "Simulated Point Bearing: " << (float) simulated_point_bearing << std::endl;
 			// float bearing_weight = ProbabilityDensityFunction(simulated_point_bearing, normal_distro2);
-			Distribution normal_distro2 = Distribution(0, bearing_sigma);
-			float min_angle = abs(robot_point_bearing - simulated_point_bearing);
+			Distribution angle_normal_distro = Distribution(0, bearing_sigma);
+			float min_angle = abs(real_point_bearing - simulated_point_bearing);
 			if (min_angle > M_PI) { min_angle = abs(min_angle - (2 * M_PI)); } // Normalized	
-			float bearing_weight = ProbabilityDensityFunction(min_angle, normal_distro2);
-
-
+			float bearing_weight = ProbabilityDensityFunction(min_angle, angle_normal_distro);
 			// std::cout << "Bearing Weight: " << (float) bearing_weight << std::endl;
 			
 			// Normalize to 1
@@ -134,14 +143,14 @@ void ParticleFilter::Generate_Weight(PointCloud robot_pointcloud, Particle &part
 
 			// std::cout << "Weight: " << (float) weight << std::endl;
 
-			if (weight > beam_weight) { beam_weight = weight; }
+			if (weight > beam_weight) beam_weight = weight;
 
 		}
 
 		// Final Particle Weight
 		particle_weight += beam_weight;
 		// Normalize particle weight based on num of beams in scan
-		if (robot_pointcloud.points.size() > 0) { particle_weight /= robot_pointcloud.points.size(); }
+		if (robot_pointcloud.points.size() > 0) particle_weight /= robot_pointcloud.points.size();
 		// Square particle weight so the best particles are more likely ot be resampled.
 		particle_weight *= particle_weight;
 
@@ -184,7 +193,7 @@ void ParticleFilter::RunParticleFilter(PointCloud scan, ControlCommand odom) {
   		random_engine.seed(seed);
 		moved_particle_variation.pose[2] = normal_th_distribution(random_engine); // Set Random theta
 
-		Generate_Weight(scan, moved_particle_variation);
+		Generate_ParticleWeight(scan, moved_particle_variation);
 
 		// Update Particle Set with new random particle
 		ParticleSet[m] = moved_particle_variation;
@@ -199,20 +208,21 @@ void ParticleFilter::Resample() {
 	float rand = Get_RandomBetween(0.0, (1.f / (float) MaxParticles)); 
 	int index = 0;
 	float CumulativeDistro = ParticleSet[index].weight;
-	std::cout << "Starting Cumulative: " << CumulativeDistro << std::endl;
+	float max_particles_inv = 1.f / (float)MaxParticles;
+	// std::cout << "Starting Cumulative: " << CumulativeDistro << std::endl;
 
 	for (int m = 0; m < MaxParticles; m++) {
 		
-		float U = rand + ((float)m / (float)MaxParticles); // Increment U by 1/N
-		std::cout << "rand: " << (float) rand << std::endl;
-		std::cout << "U: " << (float) U << std::endl;
+		float U = rand + ((float)m * max_particles_inv); // Increment U by 1/N
+		// std::cout << "rand: " << (float) rand << std::endl;
+		// std::cout << "U: " << (float) U << std::endl;
 		
 		while (U > CumulativeDistro && index < MaxParticles - 1) {
 			
 			index++;
 			CumulativeDistro += ParticleSet[index].weight;
 			
-			std::cout << "New Cumulative: " << (float) CumulativeDistro << std::endl;
+			// std::cout << "New Cumulative: " << (float) CumulativeDistro << std::endl;
 		}
 
 		// std::cout << "Num of Particles: " << ParticleSet.size() << std::endl;
@@ -242,6 +252,7 @@ ParticleFilter::ParticleFilter(int max_particles, int pose_dimensions, float tim
 	bearing_coef = 2;
 
 	unsigned seed;
+	float max_particles_inv = 1.f / (float)MaxParticles;
 
 	// Uniformly Distribute Particles
 	std::uniform_real_distribution<float> u_distro_x(0.0, MapWidth + 1);
@@ -264,7 +275,7 @@ ParticleFilter::ParticleFilter(int max_particles, int pose_dimensions, float tim
   		random_engine.seed(seed);
 		particle.pose[0] = u_distro_th(random_engine); // theta
 		
-		particle.weight = 1 / MaxParticles; // weight
+		particle.weight = max_particles_inv; // weight
 		ParticleSet.push_back(particle);
 	}
 } 
@@ -286,6 +297,7 @@ void ParticleFilter::Run(PointCloud scan, ControlCommand odom) {
 
 	RunParticleFilter(scan, odom);
 	Resample();
+	std::cout << "Particle Filter Iteration" << std::endl;
 }
 
 

@@ -4,8 +4,9 @@
 #include <string>
 #include <vector>
 #include <queue>
-#include </usr/include/eigen3/Eigen/Dense>
-#include "/usr/include/eigen3/unsupported/Eigen/CXX11/Tensor"
+#include <cstdint>
+#include <Eigen/Dense>
+#include "unsupported/Eigen/CXX11/Tensor"
 #include "utils.hpp"
 
 using namespace Eigen;

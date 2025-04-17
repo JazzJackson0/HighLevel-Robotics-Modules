@@ -5,10 +5,8 @@ float ICP::Get_RootMeanSquaredError(PointCloud RefPointSet, PointCloud NewPointS
 	float rms_error = 0.f;
 	int n = RefPointSet.points.size();
 
-	for (int i = 0; i < n; i++) {
-
+	for (int i = 0; i < n; i++)
 		rms_error += Get_EuclideanDistance(RefPointSet.points[i], NewPointSet.points[i]);
-	}
 
 	return sqrt(rms_error / n);
 	// TODO: Squaring the data once here and once in 'Get_EuclideanDistance' might be a problem, look into it.
@@ -16,30 +14,18 @@ float ICP::Get_RootMeanSquaredError(PointCloud RefPointSet, PointCloud NewPointS
 
 float ICP::Get_EuclideanDistance(VectorXf p, VectorXf q) {
 
-	float dist = 0.f;
-	for (int i = 0; i < p.rows(); i++) {
-
-		dist += pow(p[i] - q[i], 2);
-	}
-
-	return sqrt(dist);
+	return (p - q).norm();
 }
 
 VectorXf ICP::Get_CenterOfMass(PointCloud p_cloud) {
 
-	float total_weight = 0.0;
 	VectorXf center_mass(PoseDimension);
 	center_mass = VectorXf::Zero(PoseDimension);
+	float total_weight = std::accumulate(p_cloud.weights.begin(), p_cloud.weights.end(), 0.f);
+	float total_weight_inv = 1.0 / total_weight;
 
-	for (int i = 0; i < p_cloud.weights.size(); i++) {
-
-		total_weight += p_cloud.weights[i];
-	}
-
-	for (int i = 0; i < p_cloud.points.size(); i++) {
-
-		center_mass += (p_cloud.points[i] * p_cloud.weights[i]) / total_weight;
-	}
+	for (int i = 0; i < p_cloud.points.size(); i++)
+		center_mass += (p_cloud.points[i] * p_cloud.weights[i]) * total_weight_inv;
 
 	return center_mass;
 }
@@ -66,38 +52,43 @@ pair<PointCloud, PointCloud>  ICP::Calculate_Correspondences(PointCloud RefPoint
 	int ref_size = RefPointCloud.points.size();
 	//int new_size = NewPointCloud.points.size();
 	PointCloud PointSet_New;
-	struct Node* tree = kd_tree.build_tree(NewPointCloud.points);
 
 	// Loop through all points in Reference Point Cloud
+	
 	for (int i = 0; i < ref_size; i++) {
-		
 		// Get a Point for comparison with New Cloud
 		VectorXf ref_point = RefPointCloud.points[i]; 
 
 		// ---------------------------Basic n^2 method not using kd tree---------------------------------------------------
+		// auto start = std::chrono::high_resolution_clock::now();
 		// float min_dist = std::numeric_limits<float>::max();
 		// int corresponding_indx = -1;
 
 		// // Loop through all points in New Point Cloud
-		// for (int j = 0; j < new_size; j++) {
+		// for (int j = 0; j < NewPointCloud.points.size(); j++) {
 			
 		// 	// Compare every point in New Point Cloud with Point from Reference.
 		// 	VectorXf new_point = NewPointCloud.points[j]; 
-		// 	float dist = std::sqrt( pow((ref_point[0] - new_point[0]), 2) + pow((ref_point[1] - new_point[1]), 2)
-		// 		+ pow((ref_point[2] - new_point[2]), 2) );
+		// 	float dist = std::hypot((ref_point[0] - new_point[0]), (ref_point[1] - new_point[1]));
 
 		// 	if (dist < min_dist) {
 		// 		min_dist = dist;
 		// 		corresponding_indx = j;
 		// 	}
 		// }
+		// auto end = std::chrono::high_resolution_clock::now();
+    	// std::cout << "ICP O(N) Time: " << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " us" << std::endl;
 		//--------------------------------------------------------------------------------------------------------------
 
-		int corresponding_indx = kd_tree.get_nearest_neighbor(ref_point, tree, 0)->pos;
+		// start = std::chrono::high_resolution_clock::now();
+		Packet pt = NewPointCloud.kd_tree.NearestNeighbor(ref_point);
+		// end = std::chrono::high_resolution_clock::now();
+    	// std::cout << "ICP O(LogN) Time: " << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " us" << std::endl;
 		
 		// Pull out the Point Set in B that corresponds directly with Point Cloud A
-		PointSet_New.points.push_back(NewPointCloud.points[corresponding_indx]);
-		PointSet_New.weights.push_back(NewPointCloud.weights[corresponding_indx]);
+		// std::cout << "Point in New Set: " << pt.data.transpose() << std::endl;
+		PointSet_New.points.push_back(pt.data);
+		PointSet_New.weights.push_back(pt.weight);
 	}
 
 	return std::make_pair(RefPointCloud, PointSet_New);
@@ -117,10 +108,8 @@ VectorXf ICP::GetErrorVector(VectorXf x_param, VectorXf ReferencePoint, VectorXf
 void ICP::BuildErrorFunction(VectorXf ReferencePoint, VectorXf NewPoint) {
 	
 	// Initialize each element in X as an Auto-Diff Object (Equivalent to a variable x)
-	for (size_t i = 0; i < ErrorDimension; i++) {
-		
+	for (size_t i = 0; i < ErrorDimension; i++)
 		X[i] = AD<float>(0);
-	}
 
 	// Declare variables as Independent Variables. And Start Recording (A Gradient Tape Process).
 		// Gradient Tape Process: Creates an Operation Sequence
@@ -152,9 +141,8 @@ MatrixXf ICP::CalculateJacobian(VectorXf ReferencePoint, VectorXf NewPoint, Vect
 	// Holds the value of the corresponding Independent Variable's index.
 	// (e.g., 0 = X[0], 1 = X[1], etc.)
 	std::vector<float> WithRespectTo(ErrorDimension);
-	for (size_t i = 0; i < ErrorDimension; i++) {
+	for (size_t i = 0; i < ErrorDimension; i++)
 		WithRespectTo[i] = x_update[i];
-	}
 		
 	// Compute the Jacobian***********
 	std::vector<float> jac(PoseDimension * ErrorDimension);
@@ -166,10 +154,8 @@ MatrixXf ICP::CalculateJacobian(VectorXf ReferencePoint, VectorXf NewPoint, Vect
 	int k = 0;
 	for (int i = 0; i < Jac.rows(); i++) {
 
-		for (int j = 0; j < Jac.cols(); j++) {
-
+		for (int j = 0; j < Jac.cols(); j++)
 			Jac(i, j) = jac[j + k];
-		}
 
 		k += Jac.cols();	
 	}
@@ -191,7 +177,6 @@ ICP::ICP(int pose_dim, int error_dim) : PoseDimension(pose_dim), ErrorDimension(
 	X = xs;
 	Y = ys;
 	min_convergence_thresh = 4; // Random value for now
-	kd_tree = KDTree(PoseDimension);
 }
 
 
@@ -209,13 +194,11 @@ RotationTranslation ICP::RunSVDAlign(PointCloud RefPointSet, PointCloud NewPoint
 	RotationTranslation transformation;
 	transformation.weight = 0.0;
 
-	if (RefPointSet.points.size() > NewPointSet.points.size()) {
+	if (RefPointSet.points.size() > NewPointSet.points.size()) 
 		cloud_size = RefPointSet.points.size();	
-	}
 
-	else {
+	else 
 		cloud_size = NewPointSet.points.size();
-	}
 	
 	// Calculate Centers of Mass & Weight Sums
 	TrueCenterMass = Get_CenterOfMass(RefPointSet);
@@ -270,27 +253,23 @@ RotationTranslation ICP::RunICP_SVD(PointCloud RefPointCloud, PointCloud NewPoin
 
 		// Use the new Transformation to Align the point cloud: x_n = R(x_n - x_0) + y_0
 		for (int i = 0; i < TransformedPointCloud.points.size(); i++)
-		TransformedPointCloud.points[i] = (transformation.rotation_matrix * 
-			(point_sets.second.points[i] - Get_CenterOfMass(point_sets.second))) + (Get_CenterOfMass(point_sets.first));
+			TransformedPointCloud.points[i] = (transformation.rotation_matrix * 
+				(point_sets.second.points[i] - Get_CenterOfMass(point_sets.second))) + (Get_CenterOfMass(point_sets.first));
 			
 
 		// Calculate the new Error between the point clouds (Just the difference between the newly rotated point set and the reference point set)
 		int cloud_idx = 0;
 		for (int i = 0; i < TransformedPointCloud.points.size() * PoseDimension; i += PoseDimension) {
 
-			for (int j = 0; j < PoseDimension; j++) {
-
+			for (int j = 0; j < PoseDimension; j++)
 				error(i + j) = (TransformedPointCloud.points[cloud_idx][j] - point_sets.first.points[cloud_idx][j]);
-			}
 			cloud_idx++;
 		}
 		
 		// Calculate the New Error Norm (Error for the whole cloud)
 		prev_error_norm = error_norm;
-		for (int i = 0; i < TransformedPointCloud.points.size() * PoseDimension; i++) {
-
+		for (int i = 0; i < TransformedPointCloud.points.size() * PoseDimension; i++)
 			error_norm += error(i) * error(i);
-		}
 		error_norm = sqrt(error_norm);
 	}	
 
@@ -329,6 +308,8 @@ VectorXf ICP::RunICP_LeastSquares(PointCloud RefPointCloud, PointCloud NewPointC
 		iterations++;
 	}
 
+	x_update[0] = normalizeAngleRadians(x_update[0], true);
+
 	return x_update;
 }
 
@@ -344,11 +325,5 @@ VectorXf ICP::RunICP_LeastSquares(PointCloud RefPointCloud, PointCloud NewPointC
  *  - 
  *
  *  */
-
-
-
-
-
-
 
 

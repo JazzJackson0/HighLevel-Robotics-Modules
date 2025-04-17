@@ -24,22 +24,22 @@ bool RRT::isGoalReached(int x, int y) {
 bool RRT::isStartAndGoalValid() {
     
     if (!isValid(Start.x, Start.y)) {
-        std::cout << "Invalid Starting Coordinates." << std::endl;
+        std::cout << "ERROR: Invalid Starting Coordinates." << std::endl;
         return false;
     }
 
     if (!isValid(Goal.x, Goal.y)) {
-        std::cout << "Invalid Goal Coordinates." << std::endl;
+        std::cout << "ERROR: Invalid Goal Coordinates." << std::endl;
         return false;
     }
 
     if (isBlocked(Start.x, Start.y)) {
-        std::cout << "Start Coodrdinates Blocked." << std::endl;
+        std::cout << "ERROR: Start Coodrdinates Blocked." << std::endl;
         return false;
     }
 
     if (isGoalReached(Start.x, Start.y)) {
-        std::cout << "Ummm... You're already there..." << std::endl;
+        std::cout << "ERROR: Ummm... You're already there..." << std::endl;
         return false;
     }
 
@@ -61,10 +61,10 @@ bool RRT::isVisible(RRT_Node node, RRT_Node nearest) {
 
     while (true) {
 		// Clear line of sight
-        if (x_curr == node.x && y_curr == node.y) { return true; }
+        if (x_curr == node.x && y_curr == node.y) return true;
 
 		// Line of sight blocked by obstacle
-        if (isBlocked(x_curr, y_curr) == 1.0) { return false; }
+        if (isBlocked(x_curr, y_curr) == 1.0) return false;
 
         int e2 = 2 * err;
         if (e2 > -dy) {
@@ -81,8 +81,7 @@ bool RRT::isVisible(RRT_Node node, RRT_Node nearest) {
 
 float RRT::Get_Distance(RRT_Node node_a, RRT_Node node_b) {
 
-	return (sqrt( pow( ( node_a.x - node_b.x ), 2 ) + 
-                pow( ( node_a.y - node_b.y ), 2 ) ));
+	return hypot(( node_a.x - node_b.x ), ( node_a.y - node_b.y ));
 }
 
 
@@ -97,60 +96,37 @@ RRT_Node RRT::Get_RandomPosition() {
 }
 
 
-bool RRT::Get_Neighbors(float search_radius, RRT_Node randPos, std::vector<int> &neighbors) {
+bool RRT::Get_Neighbors(RRT_Node node, float search_radius, std::vector<int> &neighbors) {
 
     int n_Vertices = RapidTree.Get_NumOfVertices();
 
-    // Calculate distance between randPos and every vertex in set.
+    // Calculate distance between node and every vertex in set.
     for (int i = 0; i < n_Vertices; i++) {
-
-		float dist = Get_Distance(randPos, RapidTree.Get_Vertex(i));
-
-        if (dist <= SearchRadius) { neighbors.push_back(i); }
-    }
+        if (Get_Distance(node, RapidTree.Get_Vertex(i)) <= SearchRadius) neighbors.push_back(i);
+	}
 
 	return neighbors.size() > 0;
 }
 
 
-std::pair<int, float> RRT::Get_BestNeighbor(std::vector<int> neighbors, RRT_Node randPos) {
-
-	float min_cost = std::numeric_limits<float>::max();
-	int best_index = -1;
-	for (int i = 0; i < neighbors.size(); i++) {
-
-		float cost = RapidTree.Get_Vertex(neighbors[i]).dist_from_start;
-
-		if (cost < min_cost) { 
-			min_cost = cost;
-			best_index = i;
-		}
-	}
-
-	float dist = Get_Distance(randPos, RapidTree.Get_Vertex(best_index));
-	std::pair<int, float> best_neighbor = make_pair(best_index, dist);
-	return best_neighbor;
-}
-
-
-std::pair<int, float> RRT::Get_NearestVertexIndex(RRT_Node randPos) {
+std::pair<int, float> RRT::Get_NearestVertexIndex(RRT_Node node) {
     
     float min_dist = std::numeric_limits<float>::max();
     int nearestVertexIndex = -1;
     int n_Vertices = RapidTree.Get_NumOfVertices();
 
-    // Calculate distance between randPos and every vertex in set.
+    // Calculate distance between node and every vertex in set.
     for (int i = 0; i < n_Vertices; i++) {
 
 		RRT_Node node_i = RapidTree.Get_Vertex(i);
 
 		// This random position already exists
-		if (randPos.x == node_i.x && randPos.y == node_i.y) {
+		if (node.x == node_i.x && node.y == node_i.y) {
 			repeat_node = true;
 			return make_pair(-1, 0);  
 		}
 
-		float dist = Get_Distance(randPos, node_i);
+		float dist = Get_Distance(node, node_i);
 
         if (dist < min_dist) { 
             min_dist = dist;
@@ -165,7 +141,7 @@ bool RRT::Move_NodeCloser(RRT_Node &node, RRT_Node nearest) {
 
 	Eigen::VectorXi v(2);
 	v << (node.x - nearest.x), (node.y - nearest.y);
-	float v_magnitude = std::sqrt((v[0] * v[0]) + (v[1] * v[1]));
+	float v_magnitude = std::hypot(v[0], v[1]);
 	VectorXf unit_vec(2);
 	unit_vec << round(v[0] / v_magnitude), round(v[1] / v_magnitude);
 
@@ -184,11 +160,11 @@ bool RRT::Connect_NewVertex(std::pair<int, float> nearest_info, RRT_Node new_nod
 	RRT_Edge null_edge;
 	
     // [OPTION 1] Location is blocked--------------------------------------------------------
-    if (isBlocked(new_node.x, new_node.y)) { return false; }
+    if (isBlocked(new_node.x, new_node.y)) return false;
 
     // [OPTION 2] Random coordinate is <= Max Connect Distance: -----------------------------
     if (new_to_nearest <= MaxConnectionDistance) {
-		if(!isVisible(new_node, nearest)) { return false; }
+		if(!isVisible(new_node, nearest)) return false;
 
         // [Add new node to Graph]
 		new_node.dist_from_start = new_to_nearest + nearest.dist_from_start;
@@ -202,8 +178,8 @@ bool RRT::Connect_NewVertex(std::pair<int, float> nearest_info, RRT_Node new_nod
     }
 
     // [OPTION 3] Random coordinate is farther than Max Connect Distance:--------------------
-	if(!Move_NodeCloser(new_node, nearest)) { return false; }
-	if(!isVisible(new_node, nearest)) { return false; }
+	if(!Move_NodeCloser(new_node, nearest)) return false;
+	if(!isVisible(new_node, nearest)) return false;
 
 	new_to_nearest = Get_Distance(new_node, nearest);
 
@@ -277,17 +253,14 @@ std::stack<VectorXi> RRT::PathTraceHelper(int goal_node_idx, int current_node_id
 	waypoint << current_node.x, current_node.y;
 	path.push(waypoint);
 
-	if (current_node_idx == goal_node_idx) {
-		return path;
-	}
+	if (current_node_idx == goal_node_idx) return path;
 
 	std::vector<RRT_Edge> edges = RapidTree.Get_IncidentEdges(current_node_idx);
 	for (int i = 0; i < edges.size(); i++) {
 
 		// Move up to Parent Node
-		if (edges[i].child_index == current_node_idx) {
+		if (edges[i].child_index == current_node_idx)
 			return PathTraceHelper(goal_node_idx, edges[i].parent_index, path);
-		}
 	}
 	return path;
 }
@@ -348,14 +321,12 @@ std::vector<VectorXi> RRT::RRT_Path(VectorXi start, VectorXi goal, float maxConn
 	
 	MaxConnectionDistance = maxConnectionDistance;
 	RRT_Edge null_edge;
-	Start.x = start[0];
-	Start.y = start[1];
+	Goal.setPoint(goal[0], goal[1]);
+	Start.setPoint(start[0], start[1]);
 	Start.dist_from_start = 0.f;
-	Goal.x = goal[0];
-	Goal.y = goal[1];
+
 	if (!isStartAndGoalValid()) {
-		VectorXi start_pt(2);
-		start_pt << Start.x, Start.y;
+		VectorXi start_pt(2); start_pt << Start.x, Start.y;
 		std::vector<VectorXi> invalid_path;
 		invalid_path.push_back(start_pt);
 		return invalid_path;
@@ -371,7 +342,7 @@ std::vector<VectorXi> RRT::RRT_Path(VectorXi start, VectorXi goal, float maxConn
         RRT_Node randP = Get_RandomPosition();
 		std::pair<int, float> nearestVertex = Get_NearestVertexIndex(randP);
 		if (repeat_node) { continue; }
-        if (!Connect_NewVertex(nearestVertex, randP)) { continue; }
+        if (!Connect_NewVertex(nearestVertex, randP)) continue;
 		Connect_NewVertex(nearestVertex, randP);
 		recently_added = RapidTree.Get_NumOfVertices() - 1;
 
@@ -387,16 +358,14 @@ std::vector<VectorXi> RRT::RRT_Path(VectorXi start, VectorXi goal, float maxConn
 std::vector<VectorXi> RRT::RRTStar_Path(VectorXi start, VectorXi goal, float maxConnectionDistance, float search_radius) {
 	
 	MaxConnectionDistance = maxConnectionDistance;
-	RRT_Edge null_edge;
-	Start.x = start[0];
-	Start.y = start[1];
-	Start.dist_from_start = 0.f;
-	Goal.x = goal[0];
-	Goal.y = goal[1];
 	SearchRadius = search_radius;
+	RRT_Edge null_edge;
+	Goal.setPoint(goal[0], goal[1]);
+	Start.setPoint(start[0], start[1]);
+	Start.dist_from_start = 0.f;
+	
 	if (!isStartAndGoalValid()) {
-		VectorXi start_pt(2);
-		start_pt << Start.x, Start.y;
+		VectorXi start_pt(2); start_pt << Start.x, Start.y;
 		std::vector<VectorXi> invalid_path;
 		invalid_path.push_back(start_pt);
 		return invalid_path;
@@ -412,19 +381,14 @@ std::vector<VectorXi> RRT::RRTStar_Path(VectorXi start, VectorXi goal, float max
 		std::vector<int> neighbors;
         RRT_Node randP = Get_RandomPosition();
 		std::pair<int, float> nearest_index = Get_NearestVertexIndex(randP);
-		if (repeat_node) { continue; }
-		if (!Get_Neighbors(SearchRadius, randP, neighbors)) { continue; }
-		std::pair<int, float> best_index_in_radius = Get_BestNeighbor(neighbors, randP);
+		if (repeat_node) continue;
 		
-		if (best_index_in_radius.second <= nearest_index.second) {
-			if (!Connect_NewVertex(best_index_in_radius, randP)) { continue; }
-		}
-
-		else { 
-			if (!Connect_NewVertex(nearest_index, randP)) { continue; }
+		if (nearest_index.second <= SearchRadius) {
+			if (!Connect_NewVertex(nearest_index, randP)) continue;
 		}
 
 		// Re-wire other neighbors in search radius
+		if (!Get_Neighbors(randP, SearchRadius, neighbors)) continue;
 		int randP_index = RapidTree.Get_NumOfVertices() - 1;
 		Rewire_Neighbors(neighbors, randP_index);
 
@@ -443,7 +407,7 @@ std::vector<VectorXi> RRT::RRTStar_Path(VectorXi start, VectorXi goal, float max
 /*
  * 			TO-DO
  * 			-----
- *  - Incorporate Costmap to keep robot from hugging the edges
+ *  - 
  *
  *  - 
  *

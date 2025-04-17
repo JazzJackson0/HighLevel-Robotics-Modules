@@ -2,9 +2,7 @@
 
 void PoseGraphOptSLAM::propagateFreeSpace() {
 
-	int width = map_structure.dimension(1);
-	int height = map_structure.dimension(0);
-	VectorXi robot_index = map_builder.MapCoordinate_to_DataStructureIndex(PreviousPose.pose);
+	VectorXi robot_index = map_builder.MapCoordinate_to_DataStructureIndex(PreviousPose.pose.head<2>());
     int x_robot = robot_index[0];
     int y_robot = robot_index[1];
 
@@ -27,15 +25,15 @@ void PoseGraphOptSLAM::propagateFreeSpace() {
             int ny = y + dir[1];
 
             // Check bounds
-            if (nx < 0 || nx >= width || ny < 0 || ny >= height) {
+            if (nx < 0 || nx >= map_width || ny < 0 || ny >= map_height)
                 continue;
-            }
 
             // Check if within the robot's view range
-            if (std::sqrt(std::pow(nx - x_robot, 2) + std::pow(ny - y_robot, 2)) < VIEW_RANGE) {
+            if (std::hypot((nx - x_robot), (ny - y_robot)) < VIEW_RANGE) {
 
-                if (map_structure(ny, nx) == 0.5 && isVisible(nx, ny, x_robot, y_robot)) {
-                    map_structure(ny, nx) = 0.0;
+                if (map_structure_mask(ny, nx) == 0.5 && isVisible(nx, ny, x_robot, y_robot)) {
+                    map_structure_mask(ny, nx) = 0.0;
+					if (map_structure(ny, nx) == 0.5) map_structure(ny, nx) = 0.0;
 					VectorXi new_index(2);
 					new_index << nx, ny;
                     q.push(new_index);
@@ -47,7 +45,7 @@ void PoseGraphOptSLAM::propagateFreeSpace() {
 
 bool PoseGraphOptSLAM::isVisible(int x, int y, int x_robot, int y_robot) {
     
-	if (map_structure(y, x) == 1.0) { return false;	}
+	if (map_structure_mask(y, x) == 1.0) return false;
 
     // Bresenham's line algorithm for line of sight checking
     int dx = std::abs(x - x_robot);
@@ -61,10 +59,10 @@ bool PoseGraphOptSLAM::isVisible(int x, int y, int x_robot, int y_robot) {
 
     while (true) {
 		// Clear line of sight
-        if (x_curr == x && y_curr == y) { return true; }
+        if (x_curr == x && y_curr == y) return true;
 
 		// Line of sight blocked by obstacle
-        if (map_structure(y_curr, x_curr) == 1.0) { return false; }
+        if (map_structure_mask(y_curr, x_curr) == 1.0) return false;
 
         int e2 = 2 * err;
         if (e2 > -dy) {
@@ -79,94 +77,49 @@ bool PoseGraphOptSLAM::isVisible(int x, int y, int x_robot, int y_robot) {
 }
 
 
-// Test this!!
 Eigen::Tensor<float, 2> PoseGraphOptSLAM::UpdateMap() {
+	// Reset Map Mask to Default
+	map_structure_mask.setConstant(0.5);
 
-	VectorXi robot_index = map_builder.MapCoordinate_to_DataStructureIndex(PreviousPose.pose);
-	int width = map_structure.dimension(1);
-	int height = map_structure.dimension(0);
+	VectorXi robot_index = map_builder.MapCoordinate_to_DataStructureIndex(PreviousPose.pose.head<2>());
+	// VectorXf point;
+	// VectorXi beam_index;
 	
 	Pose_Graph.iterator_start();
 	while (Pose_Graph.iterator_hasNext()) {
 
 		Pose pose = Pose_Graph.iterator_get_data();
-
+		#pragma omp parallel for
 		for (int i = 0; i < pose.Landmarks.points.size(); i++) {
 			
 			VectorXf point = pose.Landmarks.points[i];
-			VectorXi beam_index = map_builder.MapCoordinate_to_DataStructureIndex(point);
-
-			if ((beam_index[0] >= 0 && beam_index[0] < width) && (beam_index[1] >= 0 && beam_index[1] < height)) {
-				map_structure(beam_index[1], beam_index[0]) = 1.f;
-
-				// Estimate Free Space: Bresenham's line algorithm for ray-casting
-				int dx = std::abs(beam_index[0] - robot_index[0]);
-				int dy = std::abs(beam_index[1] - robot_index[1]);
-				int sx = (robot_index[0] < beam_index[0]) ? 1 : -1;
-				int sy = (robot_index[1] < beam_index[1]) ? 1 : -1;
-				int err = dx - dy;
-
-				int x = robot_index[0];
-				int y = robot_index[1];
-
-				while (true) {
-
-					if (map_structure(y, x) == 0.5) { map_structure(y, x) = 0.0; }
-
-					if (map_structure(y, x) == 1.0) { break; }
-
-					// Stop once end of line is reached
-					if (x == beam_index[0] && y == beam_index[1]) { break; }
-
-					// Climb the slope between robot and beam point
-					int e2 = 2 * err;
-					if (e2 > -dy) {
-						err -= dy;
-						x += sx;
-					}
-					if (e2 < dx) {
-						err += dx;
-						y += sy;
-					}
+			VectorXi beam_index = map_builder.MapCoordinate_to_DataStructureIndex(point.head<2>());
+			
+			// If Beam is within Map range
+			if ((beam_index[0] >= 0 && beam_index[0] < map_width) && (beam_index[1] >= 0 && beam_index[1] < map_height)) {
+				#pragma omp critical 
+				{
+					map_structure_mask(beam_index[1], beam_index[0]) = 1.f;
+					map_structure(beam_index[1], beam_index[0]) = 1.f;
 				}
-			}
+			}	
 		}
 		Pose_Graph.iterator_next();
 	}
 	propagateFreeSpace();
+	// std::cout << map_structure << std::endl;
 	return map_structure;
 }
 
-float PoseGraphOptSLAM::Calculate_Overlap(PointCloud landmarks_a, PointCloud landmarks_b) {
+float PoseGraphOptSLAM::Calculate_Overlap(PointCloud cloud_a, PointCloud cloud_b) {
 
-	float mean_ax = 0.0;
-	float mean_ay = 0.0;
-	float mean_bx = 0.0;
-	float mean_by = 0.0;
-
-	// Calculate the mean of each point cloud
-	for (int i = 0; i < landmarks_a.points.size(); i++) {
-		mean_ax += landmarks_a.points[i](0);
-		mean_ay += landmarks_a.points[i](1);
-	}
-	mean_ax /= landmarks_a.points.size();
-	mean_ay /= landmarks_a.points.size();
-
- 
-	for (int i = 0; i < landmarks_b.points.size(); i++) {
-		mean_bx += landmarks_b.points[i](0);
-		mean_by += landmarks_b.points[i](1);
-	}
-	mean_bx /= landmarks_b.points.size();
-	mean_by /= landmarks_b.points.size();
-
-	return (float) std::abs(sqrt((mean_ax - mean_bx)*(mean_ax - mean_bx) + (mean_ay - mean_by)*(mean_ay - mean_by)));
+	return (float) std::abs(std::hypot((cloud_a.mean_x - cloud_b.mean_x), (cloud_a.mean_y - cloud_b.mean_y)));
 }
 
 
 MatrixXf PoseGraphOptSLAM::VectorToTransformationMatrix(int x, int y, AngleAndAxis angle_axis) {
 
-	MatrixXf R = Angle_to_RotationMatrix(angle_axis);
+	MatrixXf R = Angle_to_3DRotationMatrix(angle_axis);
 	VectorXf t(3);
 	t << x, y, 1;
 	MatrixXf transformation = MatrixXf::Zero(3, 3);
@@ -179,6 +132,7 @@ MatrixXf PoseGraphOptSLAM::VectorToTransformationMatrix(int x, int y, AngleAndAx
 
 void PoseGraphOptSLAM::UpdateStateVector() {
 
+	rotation_axes.clear();
 	CurrentPoses_n = Pose_Graph.Get_NumOfVertices();
 	StateVector.resize(CurrentPoses_n * PoseDimensions);
 	int stateVecIndex = 0;
@@ -189,14 +143,13 @@ void PoseGraphOptSLAM::UpdateStateVector() {
 		Pose p = Pose_Graph.Get_Vertex(i);
 		MatrixXf rotation = p.TransformationMatrix.block(0, 0, 3, 3);
 		VectorXf translation = p.TransformationMatrix.block(0, 2, 3, 1);
-		AngleAndAxis angle_axis = RotationMatrix_to_Angle(rotation); // Angle & Axis of Rotation
+		AngleAndAxis angle_axis = RotationMatrix3D_to_Angle(rotation); // Angle & Axis of Rotation
 		
 		// Add pose data to State Vector 
 		for (int j = 0; j < 2; j++) {
 			StateVector[stateVecIndex] = translation(j);
 			stateVecIndex++;
 		}
-			
 		
 		StateVector[stateVecIndex] = angle_axis.first;
 		stateVecIndex++;
@@ -212,9 +165,8 @@ void PoseGraphOptSLAM::AddPoseToGraph(Pose pose, PoseEdge edge) {
 	bool connected = true;
 
 	//  If initial pose, graph starts as unconnected
-	if (Pose_Graph.Get_NumOfVertices() == 0) {
+	if (Pose_Graph.Get_NumOfVertices() == 0)
 		connected = false;
-	}
 		
 	// Else create new edge
 	else {
@@ -233,39 +185,25 @@ void PoseGraphOptSLAM::AddPoseToGraph(Pose pose, PoseEdge edge) {
 bool PoseGraphOptSLAM::CheckForLoopClosure(Pose pose) {
 
 	// Search Graph in given radius to find possible loop closure (Excluding the n most recently added poses)
-	std::vector<Pose> closure_candidates;
-	std::vector<int> closure_candidate_ids;
+	int closest_vertex_idx = -1;
+	Pose p;
+	float dist;
 	
 	// No Loop Closure Happening
-	if (Pose_Graph.Get_NumOfVertices() <= NRecentPoses) {
-		
-		return false; 
-	}
+	if (Pose_Graph.Get_NumOfVertices() <= NRecentPoses) return false;
 
 	// Loop Closure Process Start-------------------------------------------------------------------------------
+	float min_dist = std::numeric_limits<float>::max();
 	for (int i = 0; i < Pose_Graph.Get_NumOfVertices() - NRecentPoses; i++) {
 
-		// Calculate Distance
-		Pose p = Pose_Graph.Get_Vertex(i);
-		if (sqrt(((p.pose[0] - PreviousPose.pose[0]) * (p.pose[0] - PreviousPose.pose[0])) + 
-			((p.pose[1] - PreviousPose.pose[1]) * (p.pose[1] - PreviousPose.pose[1]))) 
-			< ClosureDistance) {
-
-			closure_candidates.push_back(p);
-			closure_candidate_ids.push_back(i);
-		}
-	}
-
-	// Connect to the Closest out of those that are found in the radius.
-	double closest = 1000000000000;
-	int closest_vertex_idx = -1;
-	for (int i = 0; i < closure_candidates.size(); i++) {
-
-		if (sqrt(((closure_candidates[i].pose[0] - PreviousPose.pose[0]) * (closure_candidates[i].pose[0] - PreviousPose.pose[0])) + 
-			((closure_candidates[i].pose[1] - PreviousPose.pose[1]) * (closure_candidates[i].pose[1] - PreviousPose.pose[1]))) 
-			< closest) {
-				
-				closest_vertex_idx = closure_candidate_ids[i];
+		p = Pose_Graph.Get_Vertex(i);
+		
+		dist = std::hypot((p.pose[0] - PreviousPose.pose[0]), (p.pose[1] - PreviousPose.pose[1]));
+		
+		// If node is within valid loop closure Radius: Track the closest of all nodes in range.
+		if (dist < ClosureDistance && (dist < min_dist)) {
+			min_dist = dist;
+			closest_vertex_idx = i;
 		}
 	}
 
@@ -283,7 +221,6 @@ bool PoseGraphOptSLAM::CheckForLoopClosure(Pose pose) {
 	}
 
 	return false;
-
 }
 
 
@@ -310,10 +247,8 @@ VectorXf PoseGraphOptSLAM::GetErrorVector(VectorXf Pose_i, VectorXf Pose_j, Vect
 void PoseGraphOptSLAM::Build_ErrorFunction() {
 	
 	// Initialize each element in X as an Auto-Diff Object (Equivalent to a variable 'x')
-	for (size_t i = 0; i < (PoseDimensions * 2); i++) {
-		
+	for (size_t i = 0; i < (PoseDimensions * 2); i++)
 		X[i] = AD<float>(0);
-	}
 
 	// Declare variables as Independent Variables. And Start Recording (A Gradient Tape Process).
 		// Gradient Tape Process: Creates an Operation Sequence
@@ -358,7 +293,6 @@ HbResults PoseGraphOptSLAM::Build_LinearSystem(VectorXf pose_i, VectorXf pose_j,
 	
 	
 	// STEP 2: Compute the Jacobian of the Error Function ------------------------
-	
 	// Create vector of variables Jacobian will be calculated with respect to ( J(x) ).
 	// Holds the value of the corresponding Independent Variable's index.
 	// (e.g., 0 = X[0], 1 = X[1], etc.)
@@ -369,7 +303,6 @@ HbResults PoseGraphOptSLAM::Build_LinearSystem(VectorXf pose_i, VectorXf pose_j,
 	}
 
 	// Set up Sparsity Pattern********** Pattern For R (Where J(x) = F(x) * R)
-	// TODO: I still don't understand the point of this sparsity pattern
 	int numOfRows = (PoseDimensions * 2); // Rows must = num of independent variables X
 	int numOfCols = (PoseDimensions * 2); 
 	int numOfNonZeroElements = (PoseDimensions * 2); 
@@ -438,6 +371,8 @@ bool PoseGraphOptSLAM::FrontEnd(PointCloud current_landmarks) {
 	pose.pose = VectorXf::Zero(PoseDimensions);
 	pose.TransformationMatrix = MatrixXf::Zero(3, 3);
 	pose.TransformationMatrix(2, 2) = 1;
+
+	std::cout << "Point Cloud Overlap Amount: " << Calculate_Overlap(PreviousLandmarks, current_landmarks) << "\n";
 	
 	// Set origin node
 	if (InitialScan){
@@ -446,37 +381,38 @@ bool PoseGraphOptSLAM::FrontEnd(PointCloud current_landmarks) {
 		InitialScan = false;
 	}
 		
-	/* Check for level of overlap between landmark set of current & previous pose
+	/* Check for level of overlap between landmark sets of current & previous pose
 		Add Pose & Edge to Graph if the amount of overlap is low enough*/
 	else if (Calculate_Overlap(PreviousLandmarks, current_landmarks) > OverlapTolerance) {
 
-		 // Dimensions of the scan cloud data
+		// Dimensions of the scan cloud data
 		RotationTranslation rot_trans = icp.RunICP_SVD(PreviousLandmarks, current_landmarks); 
 		MatrixXf R = rot_trans.rotation_matrix;
 		VectorXf t = rot_trans.translation_vector;
 
-		// TEST-----------------------------------------------------------
-		// Just testing the Least Squares version really quick
+		// Least Squares version-----------------------------------------------------------
 		// VectorXf result = icp.RunICP_LeastSquares(PreviousLandmarks, current_landmarks);
 		// std::cout << "Least Squares ICP Result:" << "\n";
 		// std::cout << result.transpose() << "\n";
 		// //--------------------------------------------------------------------
 		
-		std::cout << R.rows() << " & " << t.rows() << "\n"; // Test
+		// std::cout << R.rows() << " & " << t.rows() << "\n"; // Test
 		
 		PreviousLandmarks = current_landmarks;
 		pose.pose[0] = t[0];
 		pose.pose[1] = t[1];
-		pose.pose[2] = 1; // TODO: 1 is just a place holder!! Need to use RotationMatrix_to_Angle() but its not finished
+		pose.pose[2] = RotationMatrix2D_to_Angle(R);
 		
 		// Turn R & t to a Transformation Matrix
 		pose.TransformationMatrix.topLeftCorner(2, 2) = R;
 		pose.TransformationMatrix.topRightCorner(2, 1) = t;
 
 		//std::cout << pose.TransformationMatrix << "\n"; // Test
+		if (std::isnan(pose.pose[0]) || std::isnan(pose.pose[1]) || std::isinf(pose.pose[0]) || std::isinf(pose.pose[1]))
+			std::cerr << "ERROR: Bad Pose Data from ICP Front End: " << pose.pose.transpose() << "\n";
 	}
 
-	else { return false; }
+	else return false;
 
 	AddPoseToGraph(pose, edge);
 
@@ -487,7 +423,7 @@ bool PoseGraphOptSLAM::FrontEnd(PointCloud current_landmarks) {
 
 void PoseGraphOptSLAM::Optimize() {
 	
-	std::cout << "Optimizing" << std::endl;
+	// std::cout << "Optimizing" << std::endl;
 	UpdateStateVector();
 	VectorXf StateVectorIncrement;
 	StateVectorIncrement = VectorXf::Ones(CurrentPoses_n * PoseDimensions);
@@ -540,18 +476,20 @@ void PoseGraphOptSLAM::Optimize() {
 
 		// Update State Vector
 		StateVector = StateVector + StateVectorIncrement;
-		// TODO: Angles should be normalized after applying the increments
 
 		iteration++;
-
 	}
+	ConvertStateVector();
+}
 
 
-	// TODO: PUT THIS IN ITS OWN FUNCTION-----------------------------------------------------------------------------------------------------------------
-	// Update all vertices in Graph with new Transformation Matrices. i.e. Convert from StateVector back to transformation matrices.
+void PoseGraphOptSLAM::ConvertStateVector() {
+
 	int n = 0;
 	for (int i = 0; i < StateVector.size(); i = i + PoseDimensions) {
 		
+		// Re-normalize each angle
+		StateVector(i + 2) = normalizeAngleRadians(StateVector(i + 2), true);
 		Pose updated_pose = Pose_Graph.Get_Vertex(n);
 		updated_pose.TransformationMatrix = VectorToTransformationMatrix(StateVector(i), StateVector(i+1), std::make_pair(StateVector(i+2), rotation_axes[n]));
 		Pose_Graph.Update_VertexData(n, updated_pose);
@@ -590,13 +528,15 @@ PoseGraphOptSLAM::PoseGraphOptSLAM(int max_nodes, int pose_dimension, int guess_
 	OverlapTolerance = 0.1; // distance in meters
 	max_iterations = 100;
 	StateVector = VectorXf::Zero(0); // (Assuming a pose dimension of 3 [x, y, theta])
-	icp = ICP(2, 3);
+	icp = ICP(ICP_POSE_DIM, ICP_ERR_DIM);
 	MapBuilder map_builder();
 
 	std::vector<AD<float>> xs(PoseDimensions * 2);
 	std::vector<AD<float>> ys(PoseDimensions); 
 	X = xs;
 	Y = ys;
+
+	previous_graph_size = 0;
 }
 
 
@@ -608,25 +548,53 @@ void PoseGraphOptSLAM::FrontEndInit(int n_recent_poses, float closure_distance) 
 
 
 
-Eigen::Tensor<float, 2> PoseGraphOptSLAM::Run(PointCloud current_landmarks, VectorXf &currentPose) {
+Eigen::Tensor<float, 2> PoseGraphOptSLAM::Run(PointCloud current_landmarks) {
 	
 	if (FrontEnd(current_landmarks)) {
 		Optimize();
-		std::cout << "Uhh... Sending MAP" << std::endl;
-		return UpdateMap();
+		// std::cout << "Uhh... Sending MAP" << std::endl;
+		auto start = std::chrono::high_resolution_clock::now();
+		// return UpdateMap();
+		Eigen::Tensor<float, 2> temp_map = UpdateMap();
+		auto end = std::chrono::high_resolution_clock::now();
+    	std::cout << "Map Update Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms#########################################################################################" 
+			<< std::endl;
+		std::cout << "NUM OF POSES: " << Pose_Graph.Get_NumOfVertices() << std::endl;
+		return temp_map;
+	}
+
+	// Update map if graph has new node
+	if (Pose_Graph.Get_NumOfVertices() > previous_graph_size) { 
+		previous_graph_size = Pose_Graph.Get_NumOfVertices();
+		auto start = std::chrono::high_resolution_clock::now();
+		// return UpdateMap();
+		Eigen::Tensor<float, 2> temp_map = UpdateMap();
+		auto end = std::chrono::high_resolution_clock::now();
+    	std::cout << "Map Update Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms#########################################################################################" 
+			<< std::endl;
+		std::cout << "NUM OF POSES: " << Pose_Graph.Get_NumOfVertices() << std::endl;
+		return temp_map;
 	}
 		
-	
-	for (int i = 0; i < currentPose.rows(); i++) {
-		currentPose[i] = PreviousPose.pose[i];
-	}
+	return map_structure;
 }
 
 void PoseGraphOptSLAM::Set_MapDimensions(int height, int width) {
+	map_height = height;
+	map_width = width;
+	map_structure_mask = Eigen::Tensor<float, 2>(height, width);
 	map_structure = Eigen::Tensor<float, 2>(height, width);
 	map_structure.setConstant(0.5);
 	map_builder.Update_2DMapDimensions(height, width);
 }
+
+VectorXf PoseGraphOptSLAM::BroadcastCurrentPose() {
+	 
+	if (std::isnan(PreviousPose.pose[0]) || std::isnan(PreviousPose.pose[1]) || std::isinf(PreviousPose.pose[0]) || std::isinf(PreviousPose.pose[1]))
+		std::cerr << "ERROR: POSE: " << PreviousPose.pose.transpose() << " @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#########################@@@@@@@@@@@@@@@@@@@@" << std::endl;
+	return PreviousPose.pose;
+}
+
 
 
 

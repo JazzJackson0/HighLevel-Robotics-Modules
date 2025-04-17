@@ -1,4 +1,4 @@
-#include "Star.hpp"
+#include "AStar.hpp"
 
 float A_Star::Get_ManhattanDistance(int x1, int y1, int x2, int y2) {
 
@@ -24,8 +24,7 @@ float A_Star::Get_DiagonalDistance(int x1, int y1, int x2, int y2) {
 float A_Star::Get_EuclideanDistance(int x1, int y1, int x2, int y2) {
 
     // Returns H-Cost
-    return (float)(sqrt( pow( ( x1 - x2 ), 2 ) + 
-        pow( ( y1 - y2 ), 2 ) ));
+    return std::hypot(( x1 - x2 ), ( y1 - y2 ));
 }
 
 
@@ -53,22 +52,22 @@ bool A_Star::isGoalReached(int x, int y) {
 bool A_Star::isStartAndGoalValid() {
     
     if (!isValid(Start[0], Start[1])) {
-        std::cout << "Invalid Starting Coordinates." << std::endl;
+        std::cerr << "ERROR: Invalid Starting Coordinates." << std::endl;
         return false;
     }
 
     if (!isValid(Goal[0], Goal[1])) {
-        std::cout << "Invalid Goal Coordinates." << std::endl;
+        std::cerr << "ERROR: Invalid Goal Coordinates." << std::endl;
         return false;
     }
 
     if (isBlocked(Start[0], Start[1])) {
-        std::cout << "Start Coodrdinates Blocked." << std::endl;
+        std::cerr << "ERROR: Start Coodrdinates Blocked." << std::endl;
         return false;
     }
 
     if (isGoalReached(Start[0], Start[1])) {
-        std::cout << "Ummm... You're already there..." << std::endl;
+        std::cerr << "ERROR: Ummm... You're already there..." << std::endl;
         return false;
     }
 
@@ -101,52 +100,6 @@ float A_Star::Get_GCost(int x1, int y1, int x2, int y2, DistanceFormula formula)
     if (formula == EUCLID) { return Get_EuclideanDistance(x1, y1, x2, y2); }
 
     return 0.0;
-}
-
-
-astar::Cell A_Star::AReallyShitty_LowestCostNodeFunction(std::vector<astar::Cell> &uncovered) {
-
-    float lowest_fcost = FLT_MAX;
-    float lowest_hcost = FLT_MAX;
-    int lowest_f_indx = -1;
-    
-    // Get Lowest FCost
-    for (int i = 0; i < uncovered.size(); i++) {
-
-        if (uncovered[i].FCost < lowest_fcost) {
-            lowest_fcost = uncovered[i].FCost;
-            lowest_f_indx = i;
-        }
-    }
-
-    std::vector<int> same;
-    for (int i = 0; i < uncovered.size(); i++) {
-        if (uncovered[i].FCost == lowest_fcost) {
-            same.push_back(i);
-        }
-    }
-
-    // Get Lowest HCost
-    int lowest_h_indx = lowest_f_indx;
-    for (int i = 0; i < same.size(); i++) {
-
-        if (uncovered[same[i]].HCost < lowest_hcost) {
-            lowest_hcost = uncovered[same[i]].HCost;
-            lowest_h_indx = same[i];
-        }
-    }
-
-    astar::Cell cell = uncovered[lowest_h_indx];
-
-    // Delete and adjust vector without using iterators
-    for (int i = lowest_h_indx; i < uncovered.size() - 1; i++) {
-
-        uncovered[i] = uncovered[i + 1];
-    }
-    uncovered.pop_back();
-
-    //std::cout << "Cell Found: " << cell.x << ", " << cell.y << ")" << std::endl;
-    return cell;
 }
 
 
@@ -190,29 +143,17 @@ void A_Star::Get_AdjacentCellCoordinates(int x, int y, int &x_adjacent, int &y_a
 
 
 
-astar::Cell** A_Star::Init_MatrixOfCells() {
+std::vector<std::vector<astar::Cell>> A_Star::Init_MatrixOfCells() {
 
-    // 0. Allocate Memory for Map of Cells
-    astar::Cell **cells = (astar::Cell**) malloc(WIDTH * sizeof(astar::Cell*));
+    astar::Cell default_cell;
+    default_cell.FCost = FLT_MAX - 1;
+    default_cell.GCost = 0.f;
+    default_cell.HCost = FLT_MAX - 1;
+    default_cell.parentY = -1;
+    default_cell.parentX = -1;
+    std::vector<std::vector<astar::Cell>> cells(WIDTH, std::vector<astar::Cell>(HEIGHT, default_cell));
 
-    for (int i = 0; i < WIDTH; i++) {
-        cells[i] = (astar::Cell*) malloc(HEIGHT * sizeof(astar::Cell));
-    }
-
-    // 1. Setup Map of Cells
-    for (int i = 0; i < WIDTH; i++) {
-
-        for (int j = 0; j < HEIGHT; j++) {
-
-            cells[i][j].FCost = FLT_MAX - 1;
-            cells[i][j].GCost = 0.f;
-            cells[i][j].HCost = FLT_MAX - 1;
-            cells[i][j].parentY = -1;
-            cells[i][j].parentX = -1;
-        }
-    }
-
-    // 2. Inititalize the 'Start' Cell
+    // Inititalize the 'Start' Cell
     int x = Start[0];
     int y = Start[1];
 
@@ -225,31 +166,7 @@ astar::Cell** A_Star::Init_MatrixOfCells() {
     return cells;
 }
 
-
-
-bool** A_Star::Init_BooleanMatrix() {
-    
-    // 0. Allocate Memory for Map of Booleans
-    bool **bools = (bool**) malloc(WIDTH * sizeof(bool*));
-    
-    for (int i = 0; i < WIDTH; i++) {
-        bools[i] = (bool*) malloc(HEIGHT * sizeof(bool));
-    }
-
-    // 1. Setup Map of Booleans
-    for (int i = 0; i < WIDTH; i++) {
-
-        for (int j = 0; j < HEIGHT; j++) {
-
-            bools[i][j] = false;
-        }
-    }
-    return bools;
-}
-
-
-
-void A_Star::PathTrace(astar::Cell **cells) {
+void A_Star::PathTrace(std::vector<std::vector<astar::Cell>> cells) {
     
     int x = Goal[0];
     int y = Goal[1];
@@ -327,15 +244,21 @@ std::vector<VectorXi> A_Star::Path(VectorXi startCell, VectorXi goalCell) {
     Goal = goalCell;
     if (!isStartAndGoalValid()) { 
         ThePath.push_back(startCell);
-        std::cout << "Invalid Coordinates for START (" << startCell.transpose() << ") or GOAL (" << goalCell.transpose() << ")" << std::endl;
+        std::cerr << "ERROR: Invalid Coordinates for START (" << startCell.transpose() << ") or GOAL (" << goalCell.transpose() << ")" << std::endl;
         return ThePath; 
     }
 
-    bool **Visited = Init_BooleanMatrix();
-    std::vector<astar::Cell> Uncovered;
-    astar::Cell **MapOfCells = Init_MatrixOfCells();
+    std::vector<std::vector<bool>> Visited(WIDTH, std::vector<bool>(HEIGHT, false));
+    auto cmp = [](astar::Cell cell_a, astar::Cell cell_b) {
+        if (cell_a.FCost == cell_b.FCost) {
+            return cell_a.HCost > cell_b.HCost;
+        }
+        return cell_a.FCost > cell_b.FCost;
+    };
+    std::priority_queue<astar::Cell, std::vector<astar::Cell>, decltype(cmp)> Uncovered(cmp);
+    std::vector<std::vector<astar::Cell>> MapOfCells = Init_MatrixOfCells();
     
-    // MArk the starting node as "Uncovered" and "Visited"
+    // Mark the starting node as "Uncovered" and "Visited"
     astar::Cell start;
     start.x = Start[0];
     start.y = Start[1];
@@ -343,7 +266,7 @@ std::vector<VectorXi> A_Star::Path(VectorXi startCell, VectorXi goalCell) {
     start.parentY = Start[1];
     start.FCost = 0.f;
     MapOfCells[start.x][start.y] = start;
-    Uncovered.push_back(start);
+    Uncovered.push(start);
     
     while (!Uncovered.empty()) {
 
@@ -351,7 +274,8 @@ std::vector<VectorXi> A_Star::Path(VectorXi startCell, VectorXi goalCell) {
 
         // Visit lowest cost node
         //std::cout << "To Visit Size: " << Uncovered.size() << std::endl;
-        astar::Cell cell = AReallyShitty_LowestCostNodeFunction(Uncovered);
+        astar::Cell cell = Uncovered.top();
+        Uncovered.pop();
         //std::cout << "Lowest Cost: (" << cell.x << ", " << cell.y << ")" << std::endl; 
         
         Visited[cell.x][cell.y] = true;
@@ -363,12 +287,7 @@ std::vector<VectorXi> A_Star::Path(VectorXi startCell, VectorXi goalCell) {
 
             Get_AdjacentCellCoordinates(cell.x, cell.y, x_adjacent, y_adjacent, i);
 
-            if (!isValid(x_adjacent, y_adjacent)) { continue; }
-
-            if (isBlocked(x_adjacent, y_adjacent)) { continue; }
-
-            // Already Visited
-            if ((Visited[x_adjacent][y_adjacent])) { continue; }
+            if (!isValid(x_adjacent, y_adjacent) || isBlocked(x_adjacent, y_adjacent) || (Visited[x_adjacent][y_adjacent])) { continue; }
 
             // If the Goal has been reached
             if (isGoalReached(x_adjacent, y_adjacent)) {
@@ -376,13 +295,6 @@ std::vector<VectorXi> A_Star::Path(VectorXi startCell, VectorXi goalCell) {
                 MapOfCells[x_adjacent][y_adjacent].parentX = cell.x;
                 MapOfCells[x_adjacent][y_adjacent].parentY = cell.y;
                 PathTrace(MapOfCells);
-                
-                // Tests
-                // std::cout << std::endl;
-                // std::cout << "Path:" << std::endl;
-                // for (int i = 0; i < ThePath.size(); i++) {
-                //     std::cout << ThePath[i].transpose() << std::endl;
-                // }
 
                 return ThePath;
             }
@@ -405,7 +317,7 @@ std::vector<VectorXi> A_Star::Path(VectorXi startCell, VectorXi goalCell) {
                 MapOfCells[x_adjacent][y_adjacent].parentY = cell.y;
 
                 astar::Cell cell_to_visit = MapOfCells[x_adjacent][y_adjacent];
-                Uncovered.push_back(cell_to_visit);  
+                Uncovered.push(cell_to_visit);  
 
                 // Test
                 //std::cout << "Adding Adjacent For Future Visit: (" << x_adjacent << ", " << y_adjacent << ")" << std::endl;    
@@ -413,7 +325,7 @@ std::vector<VectorXi> A_Star::Path(VectorXi startCell, VectorXi goalCell) {
         } 
     } 
 
-    std::cout << "No viable path found." << std::endl;
+    std::cerr << "ERROR: No viable A* path found." << std::endl;
     ThePath.push_back(startCell);
     return ThePath;
 }
@@ -423,7 +335,7 @@ std::vector<VectorXi> A_Star::Path(VectorXi startCell, VectorXi goalCell) {
 /*
  * 			TO-DO
  * 			-----
- *  - Incorporate Costmap to keep robot from hugging the edges
+ *  - 
  *
  *  - 
  *  

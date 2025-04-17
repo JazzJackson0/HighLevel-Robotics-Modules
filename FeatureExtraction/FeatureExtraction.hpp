@@ -2,8 +2,9 @@
 #include <iostream>
 #include <cmath>
 #include <vector>
-#include </usr/include/eigen3/Eigen/Dense>
-#include </usr/include/eigen3/Eigen/src/Core/Matrix.h>
+#include <limits>
+#include <Eigen/Dense>
+#include <Eigen/src/Core/Matrix.h>
 
 #include "utils.hpp"
 
@@ -34,25 +35,25 @@ struct SlopeInterceptLine{
     int err;
 };
 
+struct LineSegment {
+
+    GeneralFormLine general_fit_line;
+    SlopeInterceptLine slope_fit_line;
+    std::vector<Point> points;
+    std::vector<Point> predicted_points;
+    int start_idx;
+    int end_idx;
+    std::vector<Point> endpoints;
+    int err;
+};
+
 struct Landmark {
 
     int id;
     Point position;
     float range; // Range from robot
     float bearing; // Bearing relative to robot
-    std::vector<Point> points;
-    GeneralFormLine line;
-    int err;
-};
-
-struct LineSegment {
-
-    GeneralFormLine line_fit;
-    std::vector<Point> points;
-    std::vector<Point> predicted_points;
-    int start_idx;
-    int end_idx;
-    std::vector<Point> endpoints;
+    LineSegment line_seg;
     int err;
 };
 
@@ -66,12 +67,10 @@ class FeatureExtractor {
         int SeedSegWindowSize;
         float Delta; // Distance (in meters) threshold from point position to predicted point position
         float Epsillon; // Distance (in meters) threshold from every potential segment point to the fitting line
-        std::vector<Point> LaserPoints;
-        std::vector<Point> SeedSeg;
-        //vector<Point> PredictedPoints;
+        float GapValue; // Acceptable distance between points
         Point RobotPos; // Current Robot Position
         int LandmarkIDs;
-        float GapValue; // Acceptable distance between points
+        std::vector<Point> LaserPoints;
         std::vector<Landmark> NewLandmarks;
         std::vector<Landmark> AllLandmarks;
         int breakpoint_idx;
@@ -181,22 +180,32 @@ class FeatureExtractor {
         /**
          * @brief Calculate the endpoints for a seed segment
          * 
-         * @param line The fitted line of the segment
+         * @param line All data about the segment
          * @param point_a The outermost point on end a
          * @param point_b The outermost point on end b
          * @return vector<Point> The two endpoints
          */
-        std::vector<Point> Get_Endpoints(GeneralFormLine line, Point point_a, Point point_b);
+        std::vector<Point> Get_Endpoints(LineSegment line, Point point_a, Point point_b);
         
         
         /**
          * @brief Calculate the Orthogonal Projection of a given point to a given line
          * 
-         * @param slope_line 
+         * @param line 
          * @param data_point 
          * @return Point 
          */
-        Point OrthogProjectPoint2Line(SlopeInterceptLine slope_line, Point data_point);
+        Point OrthogProjectPoint2Line(LineSegment line, Point data_point);
+
+
+        /**
+         * @brief Take a point on a line and clamp it to between the corresponding seed segment's endpoint values.
+         * 
+         * @param line 
+         * @param point 
+         * @return Point 
+         */
+        Point ClampPointOnLine(LineSegment line, Point point);
 
 
         /**

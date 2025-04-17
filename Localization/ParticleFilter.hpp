@@ -6,8 +6,8 @@
 #include <vector>
 #include <cmath>
 #include "utils.hpp"
-#include </usr/include/eigen3/Eigen/Dense>
-#include "/usr/include/eigen3/unsupported/Eigen/CXX11/Tensor"
+#include <Eigen/Dense>
+#include "unsupported/Eigen/CXX11/Tensor"
 using std::vector;
 using std::pair;
 using std::make_pair;
@@ -79,8 +79,7 @@ class ParticleFilter {
 
 
 		/**
-		 * @brief Returns the probability of the mean (created with range_scan & particle_scan) 
-		 * 			occurring. A higher value (used as a weight) indicates a higher similarity 
+		 * @brief Returns the probability of x occurring. A higher value (used as a weight) indicates a higher similarity 
 		 * 			between robot & particle data. A lower value indicates a low similarity.
 		 *
 		 * @param x 
@@ -92,14 +91,13 @@ class ParticleFilter {
 
 
 		/**
-		 * @brief Look through each occupied cell in the map and determine if it falls within the range & bounds of the scanner.
-		 * 			 If so, add that cell to an array.
+		 * @brief Pseudo Scan. Get all points within range of particle.
 		 * 
 		 * @param particle The particle around which feature points will be checked for.
 		 * 
 		 * @return ** Scan - Returns a vector of all the feature points picked up within range of the give particle
 		 */
-		PointCloud Get_FeaturePoints(Particle particle);
+		PointCloud Get_FeaturePointsInRange(Particle particle);
 
 
 		/**
@@ -119,7 +117,7 @@ class ParticleFilter {
 		 * @param robot_pointcloud The point cloud obtained from the scanner.
 		 * @param particle The particle to be weighted. 
 		 */
-		void Generate_Weight(PointCloud robot_pointcloud, Particle &particle);
+		void Generate_ParticleWeight(PointCloud robot_pointcloud, Particle &particle);
 
 		
 		/**

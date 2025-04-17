@@ -3,28 +3,21 @@
 #include <iostream>
 #include <vector>
 #include <cstddef>
+#include <chrono>
 #include <bits/c++config.h>
 #include <cmath>
 #include <limits>
-
 #include <cppad/cppad.hpp>
 #include <cppad/utility/sparse2eigen.hpp>
-#include "/usr/include/eigen3/unsupported/Eigen/CXX11/Tensor"
-//#include <cppad/core/sparse_jac.hpp>
-//#include <cppad/utility/sparse_rc.hpp>
-//#include <cppad/utility/sparse_rcv.hpp>
-
-
-//#include <eigen3/Eigen/Sparse>
-//#include <eigen3/Eigen/Cholesky>
-//#include <eigen3/Eigen/Dense>
-//#include <eigen3/Eigen/src/Core/util/Constants.h>
-
+#include "unsupported/Eigen/CXX11/Tensor"
+#include <omp.h>
 #include "../DataStructures/Graph.hpp"
 #include "../ScanMatching/ICP.hpp"
 #include "../Mapping/MapBuilder.hpp"
 #include "utils.hpp"
 
+#define ICP_POSE_DIM 2
+#define ICP_ERR_DIM 3
 
 using namespace CppAD;
 using namespace Eigen;
@@ -63,7 +56,6 @@ struct HbResults {
 
 
 class PoseGraphOptSLAM {
-
 	
 	private:
 
@@ -90,7 +82,12 @@ class PoseGraphOptSLAM {
 		ICP icp;
 		MapBuilder map_builder;
 		Eigen::Tensor<float, 2> map_structure;
+		Eigen::Tensor<float, 2> map_structure_mask;
 		const int VIEW_RANGE = 600; // cm
+
+		int previous_graph_size;
+		int map_height;
+		int map_width;
 	
 
 		/**
@@ -111,18 +108,25 @@ class PoseGraphOptSLAM {
 		 */
 		bool isVisible(int x, int y, int x_robot, int y_robot);
 
+
+		/**
+		 * @brief 
+		 * 
+		 * @return Eigen::Tensor<float, 2> 
+		 */
+		Eigen::Tensor<float, 2> UpdateMap();
+
 		/**
 		 * @brief Takes 2 point clouds and determines the amount of overlap between them.
-		 * 			This is done by calculating the mean of each point cloud and returning
-		 * 			the euclidean distance between those two mean points.
+		 * 			Done by calculating the center point (using mean) of each 360 point cloud and returning
+		 * 			the euclidean distance between them.
 		 * 
-		 * 			Not sure how robust this is but it seems like a good enough way to check for overlap
 		 * 
-		 * @param landmarks_a point cloud a
-		 * @param landmarks_b point cloud b
+		 * @param cloud_a point cloud a
+		 * @param cloud_b point cloud b
 		 * @return float - The overlap distance.
 		 */
-		float Calculate_Overlap(PointCloud landmarks_a, PointCloud landmarks_b);
+		float Calculate_Overlap(PointCloud cloud_a, PointCloud cloud_b);
 
 
 		/**
@@ -134,6 +138,14 @@ class PoseGraphOptSLAM {
 		 * @return MatrixXf 
 		 */
 		MatrixXf VectorToTransformationMatrix(int x, int y, AngleAndAxis angle_axis);
+
+
+		/**
+		 * @brief Update all vertices in Graph with new Transformation Matrices. 
+		 * 		i.e. Convert from StateVector back to transformation matrices.
+		 * 
+		 */
+		void ConvertStateVector();
 
 
 		/**
@@ -261,10 +273,9 @@ class PoseGraphOptSLAM {
          * @brief Run the Pose Graph Optimization SLAM Algorithm for 1 iteration.
          * 
          * @param current_landmarks 
-         * @param currentPose 
          * @return Eigen::Tensor<float, 2> 
          */
-        Eigen::Tensor<float, 2> Run(PointCloud current_landmarks, VectorXf &currentPose);
+        Eigen::Tensor<float, 2> Run(PointCloud current_landmarks);
 
 		/**
 		 * @brief 
@@ -274,13 +285,15 @@ class PoseGraphOptSLAM {
 		 */
 		void Set_MapDimensions(int height, int width);
 
-
 		/**
 		 * @brief 
 		 * 
-		 * @return Eigen::Tensor<float, 2> 
+		 * @return VectorXf 
 		 */
-		Eigen::Tensor<float, 2> UpdateMap();
+		VectorXf BroadcastCurrentPose();
+
+
+		
 };
 
 

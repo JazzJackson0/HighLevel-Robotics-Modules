@@ -3,8 +3,10 @@
 #include <limits>
 #include <utility>
 #include <vector>
-#include </usr/include/eigen3/Eigen/Dense>
-#include "/usr/include/eigen3/unsupported/Eigen/CXX11/Tensor"
+#include <Eigen/Dense>
+#include <omp.h>
+#include <chrono>
+#include "unsupported/Eigen/CXX11/Tensor"
 #include "utils.hpp"
 #include "MapBuilder.hpp"
 
@@ -23,10 +25,9 @@ struct Cell {
 class OccupancyGridMap {
 
 	private:
-		Eigen::Tensor<float, 2> InitialGridMap;
 		Eigen::Tensor<float, 2> GridMap;
-		Eigen::Tensor<float, 2>PreviousGridMap;
 		VectorXi Pose; // Current pose of the robot
+		float PoseAngle;
 		int M;
 		int N;
 		float Alpha; // Width of Cell
@@ -42,7 +43,7 @@ class OccupancyGridMap {
 		 *
 		 *	@return float - Log Odds Value 
 		 */
-		float LogOdds(float x);
+		inline float LogOdds(float x);
 
 		
 		/**
@@ -61,13 +62,13 @@ class OccupancyGridMap {
 		/**
 		 * @brief Returns the index of the beam in a scan that is closest in heading to a given bearing.
 		 *
-		 * @param scan Range Scan
-		 * @param range The range to compare each beam to.
-		 * @param bearing The bearing to compare each beam to.
-		 *
+		 * @param beams Range Scan
+		 * @param cell 
+		 * @param call_range 
+		 * @param cell_bearing 
 		 * @return int - Index of beam with a bearing most similar to the bearing parameter
 		 */
-		int Get_MostSimilarBeam(std::vector<VectorXf> scan, float range, float bearing);
+		int Get_MostSimilarBeam(std::vector<VectorXf> beams, ogrid::Cell cell, float cell_range, float cell_bearing);
 
 
 	public:
